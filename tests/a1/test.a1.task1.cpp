@@ -36,6 +36,7 @@ Test test_a1_task1_local_to_world_no_parent("a1.task1.local_to_world.no_parent",
 	Mat4 expected = hierarchy.A->local_to_parent();
 	Mat4 mat = hierarchy.A->local_to_world();
 
+
 	if (Test::differs(mat, expected)) {
 		info("Transform A's local_to_world:");
 		Test::print_matrix(mat);

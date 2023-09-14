@@ -26,21 +26,56 @@ Trace Triangle::hit(const Ray& ray) const {
     Tri_Mesh_Vert v_0 = vertex_list[v0];
     Tri_Mesh_Vert v_1 = vertex_list[v1];
     Tri_Mesh_Vert v_2 = vertex_list[v2];
-    (void)v_0;
+    /*(void)v_0;
     (void)v_1;
-    (void)v_2;
+    (void)v_2;*/
 
     // TODO (PathTracer): Task 2
     // Intersect the ray with the triangle defined by the three vertices.
 
-    Trace ret;
-    ret.origin = ray.point;
+	Trace ret;
     ret.hit = false;       // was there an intersection?
-    ret.distance = 0.0f;   // at what distance did the intersection occur?
-    ret.position = Vec3{}; // where was the intersection?
-    ret.normal = Vec3{};   // what was the surface normal at the intersection?
+
+	Vec3 s = ray.point - v_0.position;
+	Vec3 e1 = v_1.position - v_0.position;
+	Vec3 e2 = v_2.position - v_0.position;
+
+	float bot = dot(cross(e1,ray.dir),e2);
+	if(abs(bot) < 0.00001) return ret; // close enough to zero
+
+	float invDet = 1.0 / bot;
+
+	float u = - dot(cross(s,e2),ray.dir) * invDet;
+	float v = dot(cross(e1,ray.dir),s) * invDet;
+	float t = - dot(cross(s,e2),e1) * invDet;
+
+
+	//Check for validity of u,v,t
+
+	//Valid t
+	if((t < ray.dist_bounds.x) || (t > ray.dist_bounds.y)) return ret;
+
+	//Valid u
+	if((u < 0) || (u > 1)) return ret;
+
+	//Valid v
+	if((v < 0) || (v > 1)) return ret;
+
+	float w = 1.0 - u - v;
+	//Valid w
+	if((w < 0) || (w > 1)) return ret;
+
+
+	//If we get here, hit was valid
+	ret.hit = true;
+    
+    ret.distance = t;   // at what distance did the intersection occur?
+    ret.position = ray.at(t); // where was the intersection?
+    ret.normal = w*v_0.normal + u*v_1.normal + v*v_2.normal;   // what was the surface normal at the intersection?
                            // (this should be interpolated between the three vertex normals)
-	ret.uv = Vec2{};	   // What was the uv associated with the point of intersection?
+	ret.uv = w*v_0.uv + u*v_1.uv + v*v_2.uv;	   // What was the uv associated with the point of intersection?
+	ret.origin = ray.point;
+
 						   // (this should be interpolated between the three vertex uvs)
     return ret;
 }

@@ -2,6 +2,9 @@
 #include "shape.h"
 #include "../geometry/util.h"
 
+#include <iostream>
+
+
 namespace Shapes {
 
 Vec2 Sphere::uv(Vec3 dir) {
@@ -29,15 +32,39 @@ PT::Trace Sphere::hit(Ray ray) const {
     // ray.dist_bounds! For example, if there are two intersections,
     // but only the _later_ one is within ray.dist_bounds, you should
     // return that one!
-
-    PT::Trace ret;
-    ret.origin = ray.point;
+	
+	PT::Trace ret;
     ret.hit = false;       // was there an intersection?
-    ret.distance = 0.0f;   // at what distance did the intersection occur?
-    ret.position = Vec3{}; // where was the intersection?
-    ret.normal = Vec3{};   // what was the surface normal at the intersection?
-	ret.uv = Vec2{}; 	   // what was the uv coordinates at the intersection? (you may find Sphere::uv to be useful)
-    return ret;
+
+	//Center is 0!
+	Vec3 dx = ray.point;
+	float B = 2.0 * dot(dx,ray.dir); //Note dir is normalized
+	float C = dot(dx,dx) - radius*radius;
+	float discrim = B*B-4.0*C;
+	if(discrim < 0.0) return ret;
+
+
+	float t = (-B - sqrt(discrim)) * 0.5;
+	if((t >= ray.dist_bounds.x) && (t <= ray.dist_bounds.y)){
+		ret.hit = true;
+		ret.distance = t;
+		ret.position = ray.at(t);
+		ret.normal = ret.position / radius;
+		ret.uv = uv(ret.normal);
+		ret.origin = ray.point;
+		return ret;
+	}	
+
+	t = (-B + sqrt(discrim)) * 0.5;
+	if((t < ray.dist_bounds.x) || (t > ray.dist_bounds.y)) return ret;
+
+	ret.hit = true;
+	ret.distance = t;
+	ret.position = ray.at(t);
+	ret.normal = ret.position / radius;
+	ret.uv = uv(ret.normal);
+	ret.origin = ray.point;
+	return ret;
 }
 
 Vec3 Sphere::sample(RNG &rng, Vec3 from) const {

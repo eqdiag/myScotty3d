@@ -9,8 +9,8 @@
 namespace PT {
 
 constexpr bool SAMPLE_AREA_LIGHTS = false;
-constexpr bool RENDER_NORMALS = false;
-constexpr bool LOG_CAMERA_RAYS = false;
+constexpr bool RENDER_NORMALS = true;
+constexpr bool LOG_CAMERA_RAYS = true;
 constexpr bool LOG_AREA_LIGHT_RAYS = false;
 static thread_local RNG log_rng(0x15462662); //separate RNG for logging a fraction of rays to avoid changing result when logging enabled
 
@@ -81,7 +81,10 @@ Spectrum Pathtracer::sample_indirect_lighting(RNG &rng, const Shading_Info& hit)
 
 std::pair<Spectrum, Spectrum> Pathtracer::trace(RNG &rng, const Ray& ray) {
 
+
 	Trace result = scene.hit(ray);
+
+	/*Light from env map*/
 	if (!result.hit) {
 		if (env_lights.size()) {
 			Spectrum radiance;
@@ -413,7 +416,8 @@ void Pathtracer::do_trace(RNG &rng, Tile const &tile) {
 				//if LOG_CAMERA_RAYS is set, add ray to the debug log with some small probability:
 				if constexpr (LOG_CAMERA_RAYS) {
 					if (log_rng.coin_flip(0.00001f)) {
-						log_ray(ray, 10.0f, Spectrum{1.0f});
+						//Pathtracer::log_ray(ray,40);
+						log_ray(ray, 10.0f, Spectrum{1.0});
 					}
 				}
 
