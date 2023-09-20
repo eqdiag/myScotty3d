@@ -12,10 +12,24 @@ BBox Triangle::bbox() const {
 	// TODO (PathTracer): Task 2 or 3
     // Compute the bounding box of the triangle.
 
+	//Handles 0 volume case
+	float epsilon = 0.0001;
+
     // Beware of flat/zero-volume boxes! You may need to
     // account for that here, or later on in BBox::hit.
+	Tri_Mesh_Vert v_0 = vertex_list[v0];
+    Tri_Mesh_Vert v_1 = vertex_list[v1];
+    Tri_Mesh_Vert v_2 = vertex_list[v2];
 
-    BBox box;
+	Vec3 min = hmin(v_0.position,v_1.position);
+	min = hmin(min,v_2.position);
+
+
+	Vec3 max = hmax(v_0.position,v_1.position);
+	max = hmax(max,v_2.position);
+
+
+    BBox box(min - Vec3(epsilon),max + Vec3(epsilon));
     return box;
 }
 

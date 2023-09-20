@@ -6,6 +6,8 @@
 
 #include <stack>
 
+#include <iostream>
+
 namespace PT {
 
 struct BVHBuildData {
@@ -33,8 +35,142 @@ void BVH<Primitive>::build(std::vector<Primitive>&& prims, size_t max_leaf_size)
     // size configuration.
 
 	//TODO
-
+	//std::cout << "\nBULDING BVH... LEAF_SIZE: " << max_leaf_size << std::endl;
+	root_idx = buildHelper(0,n_primitives(),max_leaf_size);
 }
+
+template<typename Primitive>
+size_t BVH<Primitive>::buildHelper(size_t start,size_t size,size_t max_leaf_size){
+
+	size_t nodeId;
+
+	if(size <= max_leaf_size){ //Leaf node case
+		//std::cout << "\n LEAF CASE: [" << start << "," << start + size << ")\n";
+		BBox leafBox;
+		for(size_t i = start; i < start + size;i++){
+			auto& primitive = primitives.at(i);
+			leafBox.enclose(primitive.bbox());
+		}
+		//Note: l = r in this case
+		nodeId = new_node(leafBox,start,size);
+	}else{ 
+		//Internal node case, so we need to
+		//1) Find a good way to cut primitives in sublist
+		//2) Recurse on children
+		//3) Create parent node and return
+
+
+		float smallestCost = FLT_MAX;
+		int smallestAxis = 0;
+		float sliceValue = 0;
+
+		//For each axis
+		for(int i = 0;i<3;i++){
+			//Init buckets
+			std::vector<SAHBucketData> buckets(NUM_BUCKETS,SAHBucketData{});
+
+
+			float minI = FLT_MAX;
+			float maxI = -FLT_MAX;
+			//Find min/max extent along axis i
+			for(int j = start; j < start + size;j++){
+				auto& primitive = primitives.at(j);
+				Vec3 center = primitive.bbox().center();
+				if(center[i] < minI){
+					minI = center[i];
+				}
+				if(center[i] > maxI){
+					maxI = center[i];
+				}
+			}
+
+			float bucketSize = (maxI - minI) / static_cast<float>(NUM_BUCKETS);
+			//Make buckets slightly bigger to resolve edge cases (when centers lie on boundaries)
+			bucketSize += 0.0001;
+			
+			//Drop primitives in buckets
+			for(int j = start; j < start + size;j++){
+				auto& primitive = primitives.at(j);
+				auto box = primitive.bbox();
+				Vec3 center = box.center();
+				//Find bucket the primitive lands in
+				size_t bucketId = static_cast<size_t>(fabs(center[i] - minI)/bucketSize);
+				//std::cout << "DIST: " << fabs(center[i] - minI) << std::endl;
+				//std::cout << "RANGE: " << maxI - minI << std::endl;
+				//std::cout << "bucket id: " << bucketId << std::endl;
+				auto& bucket = buckets.at(bucketId);
+				//Update bucket bbox and counts
+				bucket.bb.enclose(box);
+				bucket.num_prims++;
+			}
+
+
+
+			//Check all NUM_BUCKETS - 1 partitions on axis i
+			
+			for(int k = 1;k < NUM_BUCKETS;k++){
+				BBox left;
+				BBox right;
+				size_t numLeft = 0;
+				size_t numRight = 0;
+
+				//Compute left bbox
+				for(int j = 0;j < k;j++){
+					left.enclose(buckets.at(j).bb);
+					numLeft += buckets.at(j).num_prims;
+				}
+
+				//Compute right bbox
+				for(int j = k;j < NUM_BUCKETS;j++){
+					right.enclose(buckets.at(j).bb);
+					numRight += buckets.at(j).num_prims;
+				}
+
+				BBox parent;
+				parent.enclose(left);
+				parent.enclose(right);
+				float parentSA = parent.surface_area();
+
+				//Partition cost
+				float pCost = (left.surface_area() / parentSA)*numLeft;
+				pCost += (right.surface_area() / parentSA)*numRight;
+				//std::cout << "\nLEFT SA: " << left.surface_area() / parentSA << std::endl;
+				//std::cout << "\nRIGHT SA: " << right.surface_area() / parentSA << std::endl;
+
+				//Update if we found a better partition
+				if(pCost < smallestCost){
+					smallestCost = pCost;
+					smallestAxis = i;
+					sliceValue = minI + k*bucketSize;
+				}
+			}
+		}
+
+		//Now for the splitting...
+		auto first = primitives.begin() + start;
+		auto last = first + size; //Because partition is exclusive on right end
+		auto mid = std::partition(first,last,[smallestAxis,sliceValue](auto& primitive){
+			return primitive.bbox().center()[smallestAxis] <= sliceValue;
+		});
+
+		auto newFirst = primitives.begin() + start;
+		size_t leftSize = std::distance(newFirst,mid);
+		size_t rightSize = size - leftSize;
+		
+		//Create children
+		size_t leftNode = buildHelper(start,leftSize,max_leaf_size);
+		size_t rightNode = buildHelper(start + leftSize,rightSize,max_leaf_size);
+
+		BBox parentBox;
+		parentBox.enclose(nodes.at(leftNode).bbox);
+		parentBox.enclose(nodes.at(rightNode).bbox);
+
+		nodeId = new_node(parentBox,start,size,leftNode,rightNode);
+	}
+
+	return nodeId;
+}
+
 
 template<typename Primitive> Trace BVH<Primitive>::hit(const Ray& ray) const {
 	//A3T3 - traverse your BVH
@@ -45,15 +181,50 @@ template<typename Primitive> Trace BVH<Primitive>::hit(const Ray& ray) const {
 
     // The starter code simply iterates through all the primitives.
     // Again, remember you can use hit() on any Primitive value.
-
+	Trace ret;
+	ret.hit = false;
 	//TODO: replace this code with a more efficient traversal:
-    Trace ret;
-    for(const Primitive& prim : primitives) {
+    /*for(const Primitive& prim : primitives) {
         Trace hit = prim.hit(ray);
         ret = Trace::min(ret, hit);
-    }
-    return ret;
+    }*/
+	if(nodes.size() > 0){
+		auto root = nodes.at(root_idx);
+		ret = hitHelper(ray,root);
+	}
+
+	return ret;	
 }
+
+template<typename Primitive> Trace BVH<Primitive>::hitHelper(const Ray& ray,const Node& node) const{
+
+	//First check if ray hits bbox
+	Vec2 times(0.0,FLT_MAX);
+	Trace ret;
+	ret.hit = false;
+	//If hits node bbox, look inside node
+	if(node.bbox.hit(ray,times)){
+
+		//In leaf case, just traverse primitives inside
+		if(node.is_leaf()){
+			for(int i = node.start;i < node.start + node.size;i++){
+				const auto& primitive = primitives.at(i);
+				ret = Trace::min(ret,primitive.hit(ray));
+			}
+		}else{ //Interior node case
+
+			//Check left and right nodes, take min
+			Trace leftRet = hitHelper(ray,nodes.at(node.l));
+			Trace rightRet = hitHelper(ray,nodes.at(node.r));
+
+			ret = Trace::min(ret,leftRet);
+			ret = Trace::min(ret,rightRet);
+		}
+	}
+
+	return ret;
+}
+
 
 template<typename Primitive>
 BVH<Primitive>::BVH(std::vector<Primitive>&& prims, size_t max_leaf_size) {

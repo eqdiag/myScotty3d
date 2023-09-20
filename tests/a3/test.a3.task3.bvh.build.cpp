@@ -70,6 +70,7 @@ static void expect_bvh(std::vector<Vec3>& verts, size_t max_leaf_size, float exp
 	std::vector<PT::Tri_Mesh_Vert> tri_verts;
 	std::vector<PT::Triangle> prims, prims_cpy;
 
+
 	tri_verts.reserve(verts.size());
 	prims.reserve(verts.size() / 3);
 	prims_cpy.reserve(verts.size() / 3);

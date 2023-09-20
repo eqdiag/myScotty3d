@@ -85,7 +85,28 @@ struct BBox {
 		// If the ray intersected the bounding box within the range given by
 		// [times.x,times.y], update times with the new intersection times.
 
-		return false;
+
+		float tmin = times.x;
+		float tmax = times.y;
+
+		Vec3 dirInv = 1.0 / ray.dir;
+
+		for(int i = 0;i< 3;i++){
+			float t0 = (min[i] - ray.point[i]) * dirInv[i];
+			float t1 = (max[i] - ray.point[i]) * dirInv[i];
+
+			//Intersection of intervals
+			tmin = fmax(tmin,fmin(t0,t1));
+			tmax = fmin(tmax,fmax(t0,t1));
+		}
+
+		//Update only if valid interval
+		if(tmax >= tmin){
+			times.x = tmin;
+			times.y = tmax;
+		}
+
+		return tmax >= tmin;
 	}
 
 	/// Get the eight corner points of the bounding box

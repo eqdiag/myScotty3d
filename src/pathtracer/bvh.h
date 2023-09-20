@@ -10,6 +10,8 @@ struct RNG;
 
 namespace PT {
 
+static const size_t NUM_BUCKETS = 16;
+
 template<typename Primitive> class BVH {
 public:
 	class Node {
@@ -25,6 +27,11 @@ public:
 	BVH() = default;
 	BVH(std::vector<Primitive>&& primitives, size_t max_leaf_size = 1);
 	void build(std::vector<Primitive>&& primitives, size_t max_leaf_size = 1);
+	//Build helper
+	//Returns node_id in nodes[]
+	//start,size refer to start and # of primitives in primitives array 
+	//
+	size_t buildHelper(size_t start,size_t size,size_t max_leaf_size = 1); 
 
 	BVH(BVH&& src) = default;
 	BVH& operator=(BVH&& src) = default;
@@ -34,6 +41,8 @@ public:
 
 	BBox bbox() const;
 	Trace hit(const Ray& ray) const;
+	Trace hitHelper(const Ray& ray,const Node& node) const;
+
 
 	template<typename P = Primitive>
 	typename std::enable_if<std::is_copy_assignable_v<P>, BVH<P>>::type copy() const;
