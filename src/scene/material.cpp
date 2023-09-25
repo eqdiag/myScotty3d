@@ -2,6 +2,8 @@
 #include "material.h"
 #include "../util/rand.h"
 
+#include <iostream>
+
 namespace Materials {
 
 Vec3 reflect(Vec3 dir) {
@@ -11,7 +13,7 @@ Vec3 reflect(Vec3 dir) {
 	// reflected out in direction dir from surface
 	// with normal (0,1,0)
 
-    return Vec3{};
+    return -dir + 2.0f*(dir.y)*Vec3(0,1.0,0.0);
 }
 
 Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal) {
@@ -23,16 +25,36 @@ Vec3 refract(Vec3 out_dir, float index_of_refraction, bool& was_internal) {
 	// and false otherwise.
 
 	// The surface normal is (0,1,0)
+	float eta;
+	float sign;
+	//Air -> medium
+	if(out_dir.y >= 0.0){
+		eta = 1.0 / index_of_refraction;
+		sign = -1.0f;
+	}else{ //Medium to air
+		eta = index_of_refraction;
+		sign = 1.0f;
+	}
 
-	return Vec3{};
+	float cosI = out_dir.y;
+	float sinI_2 = std::max(0.0f,1.0f - cosI*cosI);
+	float sinT_2 = eta*eta*sinI_2;
+	if(sinT_2 >= 1.0f){
+		was_internal = true;
+		return Vec3{};
+	}
+	was_internal = false;
+	float cosT = std::sqrt(1.0f - sinT_2);
+	return -out_dir*eta + (eta*cosI + sign*cosT)*Vec3(0,1,0);
 }
 
 float schlick(Vec3 in_dir, float index_of_refraction) {
 	//A3T5 Materials - Schlick's approximation helper
 
 	// Implement Schlick's approximation of the Fresnel reflection factor.
-
-	return 0.0f;
+	float r0 = ((1.0 - index_of_refraction)/(1.0 + index_of_refraction));
+	float cos = std::abs(in_dir.y);
+	return r0 + (1.0f - r0)*std::pow((1.0f - cos),5);
 }
 
 Spectrum Lambertian::evaluate(Vec3 out, Vec3 in, Vec2 uv) const {
@@ -42,7 +64,7 @@ Spectrum Lambertian::evaluate(Vec3 out, Vec3 in, Vec2 uv) const {
     // is reflected through out_dir: albedo / PI_F * cos(theta).
     // Note that for Scotty3D, y is the 'up' direction.
 
-	//Because in local coords
+	//Because in local coords	
 	float cos = in.y;
 
     return Spectrum{albedo.lock()->evaluate(uv)*cos / PI_F};
@@ -96,8 +118,8 @@ Scatter Mirror::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
 	// Similar to albedo, reflectance represents the ratio of incoming light to reflected light
 
     Scatter ret;
-    ret.direction = Vec3();
-    ret.attenuation = Spectrum{};
+    ret.direction = reflect(out);
+	ret.attenuation = reflectance.lock()->evaluate(uv);
     return ret;
 }
 
@@ -130,9 +152,26 @@ Scatter Refract::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
 	// For attenuation, be sure to take a look at the Specular Transimission section of the PBRT textbook for a derivation
 
     Scatter ret;
-    ret.direction = Vec3();
-    ret.attenuation = Spectrum{};
-    return ret;
+
+	bool internal;
+	Vec3 in_dir = refract(out,ior,internal);
+	if(internal){ //Total internal reflection => just reflect as if mirror
+		ret.attenuation = transmittance.lock()->evaluate(uv);
+		ret.direction = reflect(out);
+	}else{ //Otherwise use refracted direction
+		float eta2;
+		if(out.y >= 0.0){
+			eta2 = 1.0/ ior;
+		}else{
+			eta2 = ior;
+		}
+		eta2 *= eta2;
+
+		ret.attenuation = transmittance.lock()->evaluate(uv) * eta2;
+		ret.direction = in_dir;
+	}
+
+	return ret;
 }
 
 float Refract::pdf(Vec3 out, Vec3 in) const {
@@ -180,8 +219,33 @@ Scatter Glass::scatter(RNG &rng, Vec3 out, Vec2 uv) const {
 	// For attenuation, be sure to take a look at the Specular Transimission section of the PBRT textbook for a derivation
 
     Scatter ret;
-    ret.direction = Vec3();
-    ret.attenuation = Spectrum{};
+
+	float reflectFrac = schlick(out,ior);
+
+	bool internal;
+	Vec3 in_dir = refract(out,ior,internal);
+
+	//Reflect reflectFrac rays or if we have have total internal reflection
+	if(rng.coin_flip(reflectFrac) || internal){ //Then do a simple reflect
+		ret.direction = reflect(out);
+		ret.attenuation = reflectance.lock()->evaluate(uv);
+		return ret;
+	}else{ 
+	
+		float eta2;
+		if(out.y >= 0.0){
+			eta2 = 1.0/ ior;
+		}else{
+			eta2 = ior;
+		}
+
+		eta2 *= eta2;
+
+		ret.attenuation = transmittance.lock()->evaluate(uv) * eta2;
+		ret.direction = in_dir;
+	}
+	
+
     return ret;
 }
 

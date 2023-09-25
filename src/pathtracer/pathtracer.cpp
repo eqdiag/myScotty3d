@@ -49,8 +49,12 @@ Spectrum Pathtracer::sample_direct_lighting_task4(RNG &rng, const Shading_Info& 
 	radiance += rads.first;
 	//Attenuate by bsdf 
 	radiance *= scatter.attenuation;
-	//Make sure to divie by probability of sample
-	radiance *= 1.0/hit.bsdf.pdf(hit.out_dir,scatter.direction);
+	if(hit.bsdf.is_specular()){
+		//We don't do importance sampling for perfect mirrors
+	}else{
+		//Make sure to divie by probability of sample
+		radiance *= 1.0/hit.bsdf.pdf(hit.out_dir,scatter.direction);
+	}
 
     return radiance;
 
@@ -100,8 +104,14 @@ Spectrum Pathtracer::sample_indirect_lighting(RNG &rng, const Shading_Info& hit)
 	Spectrum radiance = rads.second;
 	//Attenuate by bsdf 
 	radiance *= scatter.attenuation;
-	//Make sure to divie by probability of sample
-	radiance *= 1.0/hit.bsdf.pdf(hit.out_dir,scatter.direction);
+
+	if(hit.bsdf.is_specular()){
+		//We don't do importance sampling for perfect mirrors
+
+	}else{
+		//Make sure to divie by probability of sample
+		radiance *= 1.0/hit.bsdf.pdf(hit.out_dir,scatter.direction);
+	}
 
     return radiance;
 }
