@@ -8,7 +8,7 @@
 
 namespace PT {
 
-constexpr bool SAMPLE_AREA_LIGHTS = false;
+constexpr bool SAMPLE_AREA_LIGHTS = true;
 constexpr bool RENDER_NORMALS = false;
 constexpr bool LOG_CAMERA_RAYS = true;
 constexpr bool LOG_AREA_LIGHT_RAYS = false;
@@ -64,9 +64,44 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 	//A3T6: Pathtracer - direct light sampling (mixture sampling)
 	// TODO (PathTracer): Task 6
 
+	//If light is specular, use simple direct lighting from task 4
+	if(hit.bsdf.is_specular()) return sample_direct_lighting_task4(rng,hit);
+
     // For task 6, we want to upgrade our direct light sampling procedure to also
     // sample area lights using mixture sampling.
 	Spectrum radiance = sum_delta_lights(hit);
+
+	Materials::Scatter scatter;
+	//With prob 0.5, choose BSDF or area light sampling
+	//Choose bsdf
+	Vec3 local_in;
+	float pdf;
+	float BSDF_PROB = 0.5;
+	if(rng.coin_flip(BSDF_PROB)){
+		scatter = hit.bsdf.scatter(rng,hit.out_dir,hit.uv);
+		pdf = hit.bsdf.pdf(hit.out_dir,scatter.direction);
+		scatter.direction = hit.object_to_world.rotate(scatter.direction);
+	}else{ //choose area light sampling
+		//World direction returned here
+		scatter.direction = sample_area_lights(rng,hit.pos);
+		Vec3 local_in = hit.world_to_object.rotate(scatter.direction);
+		scatter.attenuation = hit.bsdf.evaluate(hit.out_dir,local_in,hit.uv);
+		pdf = area_lights_pdf(hit.pos,scatter.direction);
+	}
+
+
+
+	//Ok, we have our new direction, now lets trace and do a visibility check
+
+	Ray shadow_ray(hit.pos,scatter.direction,Vec2(EPS_F,INFINITY),0);
+	auto rads = trace(rng,shadow_ray);
+
+	//Needed for single sample estimate
+	pdf *= BSDF_PROB;
+
+	rads.first *= scatter.attenuation;
+	rads.first *= 1.0 / pdf;
+	radiance += rads.first;
 
 	// Example of using log_ray():
 	if constexpr (LOG_AREA_LIGHT_RAYS) {
