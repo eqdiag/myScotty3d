@@ -89,6 +89,7 @@ struct Image {
 
 	uint32_t w = 0, h = 0;
 	std::vector<float> _pdf, _cdf;
+	float _jacobian;
 	Rect jitter;
 };
 

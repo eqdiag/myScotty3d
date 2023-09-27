@@ -13,11 +13,11 @@
 			"rotation":[0,0,0,1],
 			"scale":[1,1,1]
 		},
-		"Light_transform":{
+		"Transform":{
 			"parent":null,
-			"translation":[0,2.5,0],
+			"translation":[0,0,0],
 			"rotation":[0,0,0,1],
-			"scale":[1.5,1.5,1.5]
+			"scale":[1,1,1]
 		}
 	},
 	"cameras":{
@@ -40,6 +40,11 @@
 	"shapes":{},
 	"particles":{},
 	"textures":{
+		"Texture":{
+			"type":"Image",
+			"sampler":"nearest",
+			"image":"../env_maps/doge.exr"
+		},
 		"white":{
 			"type":"Constant",
 			"color":[1,1,1],
@@ -57,7 +62,13 @@
 		}
 	},
 	"delta_lights":{},
-	"env_lights":{},
+	"env_lights":{
+		"Env Light":{
+			"type":"Sphere",
+			"intensity":1,
+			"radiance":"Texture"
+		}
+	},
 	"instances":{
 		"cameras":{
 			"Camera_instance":{
@@ -75,23 +86,19 @@
 				"draw style":"Correct",
 				"blend style":"Blend Replace",
 				"depth style":"Depth Less"
-			},
-			"Light_instance":{
-				"transform":"Light_transform",
-				"mesh":"Square",
-				"material":"em_white",
-				"visible":true,
-				"collides":true,
-				"draw style":"Correct",
-				"blend style":"Blend Replace",
-				"depth style":"Depth Less"
 			}
 		},
 		"skinned_meshes":{},
 		"shapes":{},
 		"particles":{},
 		"delta_lights":{},
-		"env_lights":{}
+		"env_lights":{
+			"Env Light Instance":{
+				"transform":"Transform",
+				"light":"Env Light",
+				"visible":true
+			}
+		}
 	}
 },"animator":{"FORMAT":"js3d-v1",
 "splines":{}}}
