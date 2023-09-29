@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-constexpr bool IMPORTANCE_SAMPLING = true;
+constexpr bool IMPORTANCE_SAMPLING = false;
 
 namespace Samplers {
 

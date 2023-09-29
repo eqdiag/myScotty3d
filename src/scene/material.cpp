@@ -65,7 +65,7 @@ Spectrum Lambertian::evaluate(Vec3 out, Vec3 in, Vec2 uv) const {
     // Note that for Scotty3D, y is the 'up' direction.
 
 	//Because in local coords	
-	float cos = in.y;
+	float cos = std::abs(in.y);
 
     return Spectrum{albedo.lock()->evaluate(uv)*cos / PI_F};
 }

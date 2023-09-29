@@ -8,7 +8,7 @@
 
 namespace PT {
 
-constexpr bool SAMPLE_AREA_LIGHTS = true;
+constexpr bool SAMPLE_AREA_LIGHTS = false;
 constexpr bool RENDER_NORMALS = false;
 constexpr bool LOG_CAMERA_RAYS = false;
 constexpr bool LOG_AREA_LIGHT_RAYS = false;
@@ -45,16 +45,18 @@ Spectrum Pathtracer::sample_direct_lighting_task4(RNG &rng, const Shading_Info& 
 
 	//TODO: weight properly depending on the probability of the sampled scattering direction and add to radiance
 
+
+	Spectrum direct = rads.first;
 	//Get reflectice component of recursive call
-	radiance += rads.first;
 	//Attenuate by bsdf 
-	radiance *= scatter.attenuation;
+	direct *= scatter.attenuation;
 	if(hit.bsdf.is_specular()){
 		//We don't do importance sampling for perfect mirrors
 	}else{
 		//Make sure to divie by probability of sample
-		radiance *= 1.0/hit.bsdf.pdf(hit.out_dir,scatter.direction);
+		direct *= 1.0/hit.bsdf.pdf(hit.out_dir,scatter.direction);
 	}
+	radiance += direct;
 
     return radiance;
 
@@ -63,45 +65,31 @@ Spectrum Pathtracer::sample_direct_lighting_task4(RNG &rng, const Shading_Info& 
 Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& hit) {
 	//A3T6: Pathtracer - direct light sampling (mixture sampling)
 	// TODO (PathTracer): Task 6
-
-	//If light is specular, use simple direct lighting from task 4
 	if(hit.bsdf.is_specular()) return sample_direct_lighting_task4(rng,hit);
 
     // For task 6, we want to upgrade our direct light sampling procedure to also
     // sample area lights using mixture sampling.
 	Spectrum radiance = sum_delta_lights(hit);
 
-	Materials::Scatter scatter;
-	//With prob 0.5, choose BSDF or area light sampling
-	//Choose bsdf
-	Vec3 local_in;
-	float pdf;
-	float BSDF_PROB = 0.5;
-	if(rng.coin_flip(BSDF_PROB)){
-		scatter = hit.bsdf.scatter(rng,hit.out_dir,hit.uv);
-		pdf = hit.bsdf.pdf(hit.out_dir,scatter.direction);
-		scatter.direction = hit.object_to_world.rotate(scatter.direction);
-	}else{ //choose area light sampling
-		//World direction returned here
-		scatter.direction = sample_area_lights(rng,hit.pos);
-		Vec3 local_in = hit.world_to_object.rotate(scatter.direction);
-		scatter.attenuation = hit.bsdf.evaluate(hit.out_dir,local_in,hit.uv);
-		pdf = area_lights_pdf(hit.pos,scatter.direction);
+	Vec3 lightDir;
+	Vec3 localLightDir;
+	if(rng.coin_flip(0.5)){
+		lightDir = sample_area_lights(rng,hit.pos);
+		localLightDir = hit.world_to_object.rotate(lightDir);
+	}else{
+		localLightDir = hit.bsdf.scatter(rng,hit.out_dir,hit.uv).direction;
+		lightDir = hit.object_to_world.rotate(localLightDir);
 	}
+	
+	Ray lightRay(hit.pos,lightDir,Vec2(EPS_F,INFINITY),0);
 
 
+	Spectrum Le = trace(rng,lightRay).first;
+	float pdf = 0.5*(hit.bsdf.pdf(hit.out_dir,localLightDir) +  area_lights_pdf(hit.pos,lightDir));
 
-	//Ok, we have our new direction, now lets trace and do a visibility check
-
-	Ray shadow_ray(hit.pos,scatter.direction,Vec2(EPS_F,INFINITY),0);
-	auto rads = trace(rng,shadow_ray);
-
-	//Needed for single sample estimate
-	pdf *= BSDF_PROB;
-
-	rads.first *= scatter.attenuation;
-	rads.first *= 1.0 / pdf;
-	radiance += rads.first;
+	Spectrum directLight = Le * hit.bsdf.evaluate(hit.out_dir,localLightDir,hit.uv) / pdf;
+	radiance += directLight;
+ 
 
 	// Example of using log_ray():
 	if constexpr (LOG_AREA_LIGHT_RAYS) {
@@ -110,6 +98,8 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 
 	return radiance;
 }
+
+
 
 Spectrum Pathtracer::sample_indirect_lighting(RNG &rng, const Shading_Info& hit) {
 	//A3T4: path tracing - indirect lighting
@@ -142,7 +132,6 @@ Spectrum Pathtracer::sample_indirect_lighting(RNG &rng, const Shading_Info& hit)
 
 	if(hit.bsdf.is_specular()){
 		//We don't do importance sampling for perfect mirrors
-
 	}else{
 		//Make sure to divie by probability of sample
 		radiance *= 1.0/hit.bsdf.pdf(hit.out_dir,scatter.direction);
@@ -201,6 +190,7 @@ std::pair<Spectrum, Spectrum> Pathtracer::trace(RNG &rng, const Ray& ray) {
 	}
 
 	return {emissive, direct + sample_indirect_lighting(rng, info)};
+	//return {{},direct + sample_indirect_lighting(rng, info)};
 }
 
 Pathtracer::Pathtracer() : thread_pool(std::thread::hardware_concurrency()) {
@@ -488,7 +478,6 @@ void Pathtracer::do_trace(RNG &rng, Tile const &tile) {
 				//if LOG_CAMERA_RAYS is set, add ray to the debug log with some small probability:
 				if constexpr (LOG_CAMERA_RAYS) {
 					if (log_rng.coin_flip(0.00001f)) {
-						//Pathtracer::log_ray(ray,40);
 						log_ray(ray, 10.0f, Spectrum{1.0});
 					}
 				}
