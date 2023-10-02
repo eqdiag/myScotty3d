@@ -1,13 +1,13 @@
 # pTrace
 
-A physically-based path tracer based based on party of [15-462/662 Computer Graphics](http://15462.courses.cs.cmu.edu).
+A physically-based path tracer based based on part of [15-462/662 Computer Graphics](http://15462.courses.cs.cmu.edu).
 
 User documentation and example works are available at https://cmu-graphics.github.io/Scotty3D-docs/ .
 
 Setup is described [here](https://github.com/eqdiag/myScotty3d/tree/main#readme).
 
 
-#Screenshots
+# Screenshots
 
 ## Cornell Box (All Diffuse Materials)
 ![cbox_all_diffuse](/screenshots/cbox_diffuse.png "Cbox all diffuse")
