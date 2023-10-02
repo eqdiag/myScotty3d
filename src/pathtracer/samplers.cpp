@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-constexpr bool IMPORTANCE_SAMPLING = false;
+constexpr bool IMPORTANCE_SAMPLING = true;
 
 namespace Samplers {
 
@@ -142,19 +142,20 @@ Vec3 Sphere::Image::sample(RNG &rng) const {
 		// Step 2: Importance sampling
 		// Use your importance sampling data structure to generate a sample direction.
 		// Tip: std::upper_bound
+
 		float r = rng.unit();
 
-		//Sphere::Uniform sampler;
-    	//return sampler.sample(rng);
-
-		auto cut = std::upper_bound(_cdf.begin(),_cdf.end(),r);
+		auto cut = std::upper_bound(_cdf.begin(),_cdf.end(),r) - 1;
 		uint32_t index = std::distance(_cdf.begin(),cut);
 
-		uint32_t x =  index % w;
+
+		uint32_t x = index % w;
 		uint32_t y = index / w;
+
 		float theta = (1.0f - (static_cast<float>(y)/static_cast<float>(h - 1)))*PI_F;
-		float phi = (static_cast<float>(x)/static_cast<float>(w - 1)) * 2.0f*PI_F;
-    	return Vec3{std::sin(theta)*cos(phi),std::cos(theta),std::sin(theta)*std::sin(phi)};
+		float phi = (static_cast<float>(x)/static_cast<float>(w - 1))*2.0f*PI_F;
+		float sinTheta = std::sin(theta);
+		return Vec3{sinTheta*std::cos(phi),std::cos(theta),sinTheta*std::sin(phi)};
 	}
 }
 
@@ -167,21 +168,21 @@ float Sphere::Image::pdf(Vec3 dir) const {
 	} else {
 		// A3T7 - image sampler importance sampling pdf
 		// What is the PDF of this distribution at a particular direction?
-		//Sphere::Uniform sampler;
-		//return sampler.pdf(dir);
-		Vec2 uv = Shapes::Sphere::uv(dir);
 
+		//TODO: pdf bug somewhere
+
+		Vec2 uv = Shapes::Sphere::uv(dir);
+		
 		float theta = (1.0f - uv.y)*PI_F;
 		float sinTheta = std::sin(theta);
-		float jacobian = w*h/(2*PI_F*PI_F*sinTheta);
 
 		uint32_t x = static_cast<uint32_t>(uv.x*w);
 		uint32_t y = static_cast<uint32_t>(uv.y*h);
 
-		uint32_t index = y*w + x;
-		assert(index <= w*h);
-		float prob = _pdf[index];
-		return prob*jacobian;
+		float pdf = _pdf.at(y*w + x);
+		float jacobian = w*h/(2.0f*PI_F*PI_F*sinTheta);
+
+		return pdf*jacobian;
 	}
 }
 

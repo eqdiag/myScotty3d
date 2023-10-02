@@ -11,7 +11,7 @@ namespace PT {
 constexpr bool SAMPLE_AREA_LIGHTS = false;
 constexpr bool RENDER_NORMALS = false;
 constexpr bool LOG_CAMERA_RAYS = false;
-constexpr bool LOG_AREA_LIGHT_RAYS = false;
+constexpr bool LOG_AREA_LIGHT_RAYS = true;
 static thread_local RNG log_rng(0x15462662); //separate RNG for logging a fraction of rays to avoid changing result when logging enabled
 
 Spectrum Pathtracer::sample_direct_lighting_task4(RNG &rng, const Shading_Info& hit) {
@@ -73,7 +73,8 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 
 	Vec3 lightDir;
 	Vec3 localLightDir;
-	if(rng.coin_flip(0.5)){
+	float LIGHT_PROB = 0.5;
+	if(rng.coin_flip(LIGHT_PROB)){
 		lightDir = sample_area_lights(rng,hit.pos);
 		localLightDir = hit.world_to_object.rotate(lightDir);
 	}else{
@@ -85,7 +86,7 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 
 
 	Spectrum Le = trace(rng,lightRay).first;
-	float pdf = 0.5*(hit.bsdf.pdf(hit.out_dir,localLightDir) +  area_lights_pdf(hit.pos,lightDir));
+	float pdf = (1.0f-LIGHT_PROB)*hit.bsdf.pdf(hit.out_dir,localLightDir) +  LIGHT_PROB*area_lights_pdf(hit.pos,lightDir);
 
 	Spectrum directLight = Le * hit.bsdf.evaluate(hit.out_dir,localLightDir,hit.uv) / pdf;
 	radiance += directLight;
@@ -93,7 +94,7 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
 
 	// Example of using log_ray():
 	if constexpr (LOG_AREA_LIGHT_RAYS) {
-		if (log_rng.coin_flip(0.001f)) log_ray(Ray(), 100.0f);
+		if (log_rng.coin_flip(0.0001f)) log_ray(lightRay, 100.0f);
 	}
 
 	return radiance;
@@ -190,7 +191,6 @@ std::pair<Spectrum, Spectrum> Pathtracer::trace(RNG &rng, const Ray& ray) {
 	}
 
 	return {emissive, direct + sample_indirect_lighting(rng, info)};
-	//return {{},direct + sample_indirect_lighting(rng, info)};
 }
 
 Pathtracer::Pathtracer() : thread_pool(std::thread::hardware_concurrency()) {

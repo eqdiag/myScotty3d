@@ -43,7 +43,7 @@
 		"Texture":{
 			"type":"Image",
 			"sampler":"nearest",
-			"image":"../env_maps/doge.exr"
+			"image":"../env_maps/ennis.exr"
 		},
 		"white":{
 			"type":"Constant",
