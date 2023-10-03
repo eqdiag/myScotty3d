@@ -8,7 +8,7 @@
 
 namespace PT {
 
-constexpr bool SAMPLE_AREA_LIGHTS = false;
+constexpr bool SAMPLE_AREA_LIGHTS = true;
 constexpr bool RENDER_NORMALS = false;
 constexpr bool LOG_CAMERA_RAYS = false;
 constexpr bool LOG_AREA_LIGHT_RAYS = true;
@@ -71,26 +71,26 @@ Spectrum Pathtracer::sample_direct_lighting_task6(RNG &rng, const Shading_Info& 
     // sample area lights using mixture sampling.
 	Spectrum radiance = sum_delta_lights(hit);
 
-	Vec3 lightDir;
-	Vec3 localLightDir;
-	float LIGHT_PROB = 0.5;
-	if(rng.coin_flip(LIGHT_PROB)){
-		lightDir = sample_area_lights(rng,hit.pos);
-		localLightDir = hit.world_to_object.rotate(lightDir);
-	}else{
-		localLightDir = hit.bsdf.scatter(rng,hit.out_dir,hit.uv).direction;
-		lightDir = hit.object_to_world.rotate(localLightDir);
+	Vec3 local_in_dir;
+	Vec3 world_in_dir;
+
+	if(rng.coin_flip(0.5)){ //Light sample
+		world_in_dir = sample_area_lights(rng,hit.pos);
+		local_in_dir = hit.world_to_object.rotate(world_in_dir);
+	}else{ //Brdf sample
+		local_in_dir = hit.bsdf.scatter(rng,hit.out_dir,hit.uv).direction;
+		world_in_dir = hit.object_to_world.rotate(local_in_dir);
 	}
 	
-	Ray lightRay(hit.pos,lightDir,Vec2(EPS_F,INFINITY),0);
 
+	Ray lightRay(hit.pos,world_in_dir,Vec2(EPS_F,INFINITY),0);
 
 	Spectrum Le = trace(rng,lightRay).first;
-	float pdf = (1.0f-LIGHT_PROB)*hit.bsdf.pdf(hit.out_dir,localLightDir) +  LIGHT_PROB*area_lights_pdf(hit.pos,lightDir);
+	float pdf = 0.5f*(hit.bsdf.pdf(hit.out_dir,local_in_dir) + area_lights_pdf(hit.pos,world_in_dir));
+	//float pdf = area_lights_pdf(hit.pos,world_in_dir);
 
-	Spectrum directLight = Le * hit.bsdf.evaluate(hit.out_dir,localLightDir,hit.uv) / pdf;
+	Spectrum directLight = Le * hit.bsdf.evaluate(hit.out_dir,local_in_dir,hit.uv)  / pdf;
 	radiance += directLight;
- 
 
 	// Example of using log_ray():
 	if constexpr (LOG_AREA_LIGHT_RAYS) {
@@ -191,6 +191,7 @@ std::pair<Spectrum, Spectrum> Pathtracer::trace(RNG &rng, const Ray& ray) {
 	}
 
 	return {emissive, direct + sample_indirect_lighting(rng, info)};
+	//return {emissive,direct};
 }
 
 Pathtracer::Pathtracer() : thread_pool(std::thread::hardware_concurrency()) {

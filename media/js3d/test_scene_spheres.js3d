@@ -1,0 +1,197 @@
+{"scene":{
+	"FORMAT":"js3d-v1",
+	"transforms":{
+		"Transform":{
+			"parent":null,
+			"translation":[0,0,0],
+			"rotation":[0,0,0,1],
+			"scale":[0.8170077800750732,1,1.026734590530396]
+		},
+		"Transform 1":{
+			"parent":null,
+			"translation":[-0.5341405868530273,0.25,0.5865817070007324],
+			"rotation":[0,0,0,1],
+			"scale":[0.25,0.25,0.25]
+		},
+		"Transform 2":{
+			"parent":null,
+			"translation":[0,0,0],
+			"rotation":[0,0,0,1],
+			"scale":[1,1,1]
+		},
+		"Transform 3":{
+			"parent":null,
+			"translation":[1.055743336677551,0.5239911079406738,0.04016760736703873],
+			"rotation":[-0.1103547737002373,0.6936772465705872,0.1088274046778679,0.7034133076667786],
+			"scale":[1,1,1]
+		},
+		"Transform 4":{
+			"parent":null,
+			"translation":[0,0,0],
+			"rotation":[0,0,0,1],
+			"scale":[1,1,1]
+		},
+		"Transform 5":{
+			"parent":null,
+			"translation":[-0.1679179668426514,0.25,-0.3379454612731934],
+			"rotation":[0,0,0,1],
+			"scale":[0.25,0.25,0.25]
+		},
+		"Transform 6":{
+			"parent":null,
+			"translation":[-0.4229099154472351,0.25,0.4885852038860321],
+			"rotation":[0,0,0,1],
+			"scale":[0.25,0.25,0.25]
+		}
+	},
+	"cameras":{
+		"Camera":{
+			"vertical_fov":60,
+			"aspect_ratio":1.777780055999756,
+			"near_plane":0.1000000014901161,
+			"film.width":1280,
+			"film.height":720,
+			"film.samples":32,
+			"film.max_ray_depth":12,
+			"film.sample_pattern":"Center"
+		}
+	},
+	"meshes":{
+		"Mesh":{ "FORMAT":"s3d-hm-1","halfedge_nexts":"uint32:AgAAAAUAAAAEAAAABgAAAAAAAAAJAAAACAAAAAEAAAADAAAABwAAAA","halfedge_corner_uvs":"vec2:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA/AACAPwAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAIA/AAAAAAAAAAA","halfedge_corner_normals":"vec3:AAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAA","bone_weight_bones":"uint32:","bone_weight_weights":"float:","vertex_halfedges":"uint32:AAAAAAIAAAAEAAAACAAAAA","vertex_positions":"vec3:AACAvwAAAAAAAIC/AACAvwAAAAAAAIA/AACAPwAAAAAAAIC/AACAPwAAAAAAAIA/","vertex_bone_weight_ends":"uint32:AAAAAAAAAAAAAAAAAAAAAA","edge_sharps":"bool:BA","face_halfedges":"uint32:AAAAAAMAAAAFAAAA","face_boundaries":"bool:MA"}
+	},
+	"skinned_meshes":{},
+	"shapes":{
+		"Shape":{
+			"type":"Sphere",
+			"radius":1
+		},
+		"Shape 1":{
+			"type":"Sphere",
+			"radius":1
+		},
+		"Shape 2":{
+			"type":"Sphere",
+			"radius":1
+		},
+		"Shape 3":{
+			"type":"Sphere",
+			"radius":1
+		},
+		"Shape 4":{
+			"type":"Sphere",
+			"radius":1
+		},
+		"Shape 5":{
+			"type":"Sphere",
+			"radius":1
+		}
+	},
+	"particles":{},
+	"textures":{
+		"Texture":{
+			"type":"Constant",
+			"color":[0.4936169981956482,0.4936169981956482,0.4936169981956482],
+			"scale":1
+		},
+		"Texture 2":{
+			"type":"Constant",
+			"color":[0.75,0.75,0.75],
+			"scale":1
+		},
+		"Texture 3":{
+			"type":"Constant",
+			"color":[0.75,0.75,0.75],
+			"scale":1
+		},
+		"env_tex":{
+			"type":"Image",
+			"sampler":"nearest",
+			"image":"../env_maps/ennis.exr"
+		}
+	},
+	"materials":{
+		"Material":{
+			"type":"Lambertian",
+			"albedo":"Texture 3"
+		},
+		"Material 1":{
+			"type":"Lambertian",
+			"albedo":"Texture"
+		},
+		"glass_material":{
+			"type":"Glass",
+			"transmittance":"Texture",
+			"reflectance":"Texture",
+			"ior":1.5
+		},
+		"mirror_material":{
+			"type":"Mirror",
+			"reflectance":"Texture"
+		},
+		"white_diffuse":{
+			"type":"Lambertian",
+			"albedo":"Texture"
+		}
+	},
+	"delta_lights":{},
+	"env_lights":{
+		"Env Light":{
+			"type":"Sphere",
+			"intensity":1,
+			"radiance":"env_tex"
+		}
+	},
+	"instances":{
+		"cameras":{
+			"Camera Instance":{
+				"transform":"Transform 3",
+				"camera":"Camera"
+			}
+		},
+		"meshes":{
+			"Mesh Instance":{
+				"transform":"Transform",
+				"mesh":"Mesh",
+				"material":"white_diffuse",
+				"visible":true,
+				"collides":true,
+				"draw style":"Correct",
+				"blend style":"Blend Replace",
+				"depth style":"Depth Less"
+			}
+		},
+		"skinned_meshes":{},
+		"shapes":{
+			"Shape Instance 1":{
+				"transform":"Transform 5",
+				"shape":"Shape 4",
+				"material":"glass_material",
+				"visible":true,
+				"collides":true,
+				"draw style":"Correct",
+				"blend style":"Blend Replace",
+				"depth style":"Depth Less"
+			},
+			"Shape Instance 2":{
+				"transform":"Transform 6",
+				"shape":"Shape 5",
+				"material":"mirror_material",
+				"visible":true,
+				"collides":true,
+				"draw style":"Correct",
+				"blend style":"Blend Replace",
+				"depth style":"Depth Less"
+			}
+		},
+		"particles":{},
+		"delta_lights":{},
+		"env_lights":{
+			"Env Light Instance":{
+				"transform":"Transform 2",
+				"light":"Env Light",
+				"visible":true
+			}
+		}
+	}
+},"animator":{"FORMAT":"js3d-v1",
+"splines":{}}}
