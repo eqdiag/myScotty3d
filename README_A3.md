@@ -1,6 +1,6 @@
 # pTrace
 
-A physically-based path tracer based based on the stencil code for [Scotty3D](https://github.com/CMU-Graphics/Scotty3D) .
+A physically-based path tracer based based on the stencil code for [Scotty3D](https://github.com/CMU-Graphics/Scotty3D).
 
 Setup is described [here](https://github.com/eqdiag/myScotty3d/tree/main#readme).
 
