@@ -331,8 +331,68 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
  */
 std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	//A2L1: Flip Edge
-	
-    return std::nullopt;
+
+	//Can't flip boundary edges
+	if(e->on_boundary()) return std::nullopt;
+
+	//Otherwise, there should be at least two triangles on each side
+
+	//First get everything we need access to
+
+	//Half edges first
+    HalfedgeRef he = e->halfedge;
+	HalfedgeRef twin = he->twin;
+
+	HalfedgeRef e_start_old_prev = he;
+	do{
+		e_start_old_prev = e_start_old_prev->next;
+	}while(e_start_old_prev->next != he);
+	HalfedgeRef e_start_old_next = twin->next;
+	HalfedgeRef e_start_new_next = e_start_old_next->next;
+
+	HalfedgeRef e_end_old_prev = twin;
+	do{
+		e_end_old_prev = e_end_old_prev->next;
+	}while(e_end_old_prev->next != twin);
+	HalfedgeRef e_end_old_next = he->next;
+	HalfedgeRef e_end_new_next = e_end_old_next->next;
+
+	//Vertices next
+	VertexRef v_start_old = he->vertex;
+	VertexRef v_start_new = e_start_new_next->vertex;
+	VertexRef v_end_old = e_end_old_next->vertex;
+	VertexRef v_end_new = e_end_new_next->vertex;
+
+	//Don't need to actually get edges
+
+	//Now faces
+	//"left" and "right" faces
+	FaceRef fl = he->face;
+	FaceRef fr = twin->face;
+
+	//Detach old half edges
+	e_start_old_prev->next = e_start_old_next;
+	e_end_old_prev->next = e_end_old_next;
+	v_start_old->halfedge = e_start_old_next;
+	v_end_old->halfedge = e_end_old_next;
+
+	//Attach new half edges
+	e_start_old_next->next = he;
+	he->next = e_end_new_next;
+	e_end_old_next->next = twin;
+	twin->next = e_start_new_next;
+	v_start_new->halfedge = e_start_new_next;
+	v_end_new->halfedge = e_end_new_next;
+
+	//Clean up faces
+	e_start_old_next->face = fl;
+	e_end_old_next->face = fr;
+	he->face = fl;
+	twin->face = fr;
+	fl->halfedge = he;
+	fr->halfedge = twin;
+
+	return e;
 }
 
 
