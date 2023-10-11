@@ -562,7 +562,7 @@ std::optional<std::pair<Halfedge_Mesh::ElementCRef, std::string>> Halfedge_Mesh:
 		assert(eret.second); //every halfedge is unique, so emplace can't fail
 		auto fret = face_halfedges[h->face].emplace(h);
 		assert(fret.second); //every halfedge is unique, so emplace can't fail
-	}
+	}	
 
 	//check edge->halfedge(->twin)^n:
 	for (EdgeCRef e = edges.begin(); e != edges.end(); ++e) {

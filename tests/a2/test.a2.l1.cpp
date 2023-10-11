@@ -3,6 +3,7 @@
 
 static void expect_flip(Halfedge_Mesh &mesh, Halfedge_Mesh::EdgeRef edge, Halfedge_Mesh const &after) {
 	if (auto ret = mesh.flip_edge(edge)) {
+
 		if (auto msg = mesh.validate()) {
 			throw Test::error("Invalid mesh: " + msg.value().second);
 		}

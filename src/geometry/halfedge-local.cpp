@@ -222,8 +222,225 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::bisect_edge(EdgeRef e) {
 std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 	// A2L2 (REQUIRED): split_edge
 	
-	(void)e; //this line avoids 'unused parameter' warnings. You can delete it as you fill in the function.
-    return std::nullopt;
+	//(void)e; //this line avoids 'unused parameter' warnings. You can delete it as you fill in the function.
+
+	HalfedgeRef he = e->halfedge;
+	HalfedgeRef twin = he->twin;
+	bool he_boundary = he->face->boundary;
+	bool twin_boundary = twin->face->boundary;
+	if(he_boundary && twin_boundary) return std::nullopt;
+
+	//3 cases total (2 single boundary face cases, 1 no boundary face case)
+	
+	if(he_boundary){ //twin half-edge half-subidivision case
+
+		//Reduce to next case
+		e->halfedge = twin;
+		return split_edge(e);
+
+	}else if(twin_boundary){ //he half-edge half-subidivision case
+
+		//Phase 1: Collect all needed elements
+
+		//Halfedges
+		HalfedgeRef he_n = he->next;
+		HalfedgeRef he_n2 = he_n->next;
+		HalfedgeRef he_p = he;
+		do{
+			he_p = he_p->next;
+		}while(he_p->next != he);
+
+		//Vertices
+		VertexRef old_v_left = he_n2->vertex;
+		VertexRef old_v_right = twin->vertex;
+		VertexRef old_v_bot_right = he->vertex;
+
+
+		//Faces
+		FaceRef old_f = he->face;
+		FaceRef bound_f = twin->face;
+
+		//Phase 2: Create any new elements
+
+		//Halfedges
+		HalfedgeRef new_out = emplace_halfedge();
+		HalfedgeRef new_in = emplace_halfedge();
+		HalfedgeRef split_in = emplace_halfedge();
+		HalfedgeRef split_out = emplace_halfedge();
+
+		//Edges
+		EdgeRef new_e = emplace_edge();
+		EdgeRef split_e = emplace_edge();
+
+		//Vertices
+		VertexRef new_v = emplace_vertex();
+
+		//Faces
+		FaceRef new_f = emplace_face();
+
+		//Set data for new things
+
+		//Halfedges
+		new_out->set_tnvef(new_in,he_n2,new_v,new_e,old_f);
+		new_in->set_tnvef(new_out,he,old_v_left,new_e,new_f);
+		split_out->set_tnvef(split_in,twin->next,new_v,split_e,bound_f);
+		split_in->set_tnvef(split_out,new_out,old_v_bot_right,split_e,old_f);
+
+		//Edges
+		new_e->halfedge = new_out;
+		new_e->sharp = false; //inside edge
+		split_e->halfedge = split_in;
+		split_e->sharp = true; //boundary edge
+	
+
+		//Vertices
+		new_v->position = e->center();
+		new_v->halfedge = he;
+
+		//Faces
+		new_f->boundary = false;
+		new_f->halfedge = he;
+
+		//Phase 3: Connect up old elements
+
+		//Halfedges
+		he->face = new_f;
+		he->vertex = new_v;
+		twin->next = split_out;
+		he_n->next = new_in;
+		he_n->face = new_f;
+		he_p->next = split_in;
+
+		//Vertices
+		old_v_left->halfedge = new_in;
+		old_v_right->halfedge = he_n;
+		old_v_bot_right->halfedge = split_in;
+
+		//Faces
+		old_f->halfedge = split_in;
+		bound_f->halfedge = twin;
+
+		//Debugging
+		assert(he->next == he_n);
+		assert(he_n->next == new_in);
+		assert(he_n->next->next == he);
+		assert(new_f == new_in->face);
+
+		assert(split_in->next == new_out);
+		assert(new_out->next == he_n2);
+		assert(he_n2->next == he_p);
+		assert(he_p->next == split_in);
+
+
+		return new_v;
+
+	}else{ //Normal case
+
+		//Phase 1: Collect all needed elements
+
+		//Get half-edges
+		HalfedgeRef he_n = he->next;
+		HalfedgeRef he_n2 = he_n->next;
+		HalfedgeRef he_p = he;
+		do{
+			he_p = he_p->next;
+		}while(he_p->next != he);
+
+		HalfedgeRef twin_n = twin->next;
+		HalfedgeRef twin_n2 = twin_n->next;
+		HalfedgeRef twin_p = twin;
+		do{
+			twin_p = twin_p->next;
+		}while(twin_p->next != twin);
+
+		//Get vertices
+		VertexRef old_v_left = he_n2->vertex;
+		VertexRef old_v_right = twin_n2->vertex;
+		VertexRef old_top = twin->vertex;	
+		VertexRef old_bot = he->vertex;	
+
+		//Get faces
+		FaceRef old_f_left = he->face;
+		FaceRef old_f_right = twin->face;
+
+
+		//Phase 2: Create new elements
+
+		//Half-edges first
+		HalfedgeRef new_l_out = emplace_halfedge();
+		HalfedgeRef new_l_in = emplace_halfedge();
+		HalfedgeRef new_r_out = emplace_halfedge();
+		HalfedgeRef new_r_in = emplace_halfedge();
+		HalfedgeRef new_out = emplace_halfedge();
+		HalfedgeRef new_in = emplace_halfedge();
+
+		//Edges next
+		EdgeRef new_l = emplace_edge();
+		EdgeRef new_r = emplace_edge();
+		EdgeRef new_split = emplace_edge();
+
+		//Vertices
+		VertexRef new_v = emplace_vertex();
+
+		//Faces
+		FaceRef new_f_left = emplace_face();
+		FaceRef new_f_right = emplace_face();
+
+		//Set data for new elements
+
+		//Half edges
+		new_l_out->set_tnvef(new_l_in,he_n2,new_v,new_l,old_f_left);
+		new_l_in->set_tnvef(new_l_out,new_out,old_v_left,new_l,new_f_left);
+		new_r_out->set_tnvef(new_r_in,twin_n2,new_v,new_r,old_f_right);
+		new_r_in->set_tnvef(new_r_out,twin,old_v_right,new_r,new_f_right);
+		new_out->set_tnvef(new_in,he_n,new_v,new_split,new_f_left);
+		new_in->set_tnvef(new_out,new_r_out,old_top,new_split,old_f_right);
+
+		//Edges
+		new_l->halfedge = new_l_out;
+		new_l->sharp = false; //inner edge 
+		new_r->halfedge = new_r_out;
+		new_r->sharp = false; //also inner edge
+		new_split->halfedge = new_out;
+		new_split->sharp = false; //also inner edge
+
+		//Vertices
+		new_v->position = e->center(); //actually update position to midpt of edge
+		new_v->halfedge = new_l_out;
+
+		//Faces
+		new_f_left->halfedge = new_out;
+		new_f_left->boundary = false;
+		new_f_right->halfedge = twin;
+		new_f_right->boundary = false;
+
+		//Phase 3: Connect up old elements
+
+		//Half edges first
+		he->set_tnvef(twin,new_l_out,old_bot,e,old_f_left);
+		he_n->next = new_l_in;
+		he_n->face = new_f_left;
+		he_p->next = he;
+		
+		twin->set_tnvef(he,twin_n,new_v,e,new_f_right);
+		twin_n->next = new_r_in;
+		twin_n->face = new_f_right;
+		twin_p->next = new_in;
+
+		//Vertices
+		old_v_left->halfedge = new_l_in;
+		old_v_right->halfedge = new_r_in;
+		old_top->halfedge = new_in;
+		old_bot->halfedge = he;
+
+		//Faces
+		old_f_left->halfedge = he;
+		old_f_right->halfedge = new_in;
+		new_f_left->halfedge = new_out;
+		new_f_right->halfedge = twin;
+
+		return new_v;
+	}
 }
 
 
@@ -340,57 +557,64 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	//First get everything we need access to
 
 	//Half edges first
-    HalfedgeRef he = e->halfedge;
+	HalfedgeRef he = e->halfedge;
 	HalfedgeRef twin = he->twin;
 
-	HalfedgeRef e_start_old_prev = he;
+	HalfedgeRef he_back = he;
 	do{
-		e_start_old_prev = e_start_old_prev->next;
-	}while(e_start_old_prev->next != he);
-	HalfedgeRef e_start_old_next = twin->next;
-	HalfedgeRef e_start_new_next = e_start_old_next->next;
+		he_back = he_back->next;
+	}while(he_back->next != he);
 
-	HalfedgeRef e_end_old_prev = twin;
+	HalfedgeRef he_front = twin->next;
+	HalfedgeRef he_front2 = he_front->next;
+
+	HalfedgeRef twin_back = twin;
 	do{
-		e_end_old_prev = e_end_old_prev->next;
-	}while(e_end_old_prev->next != twin);
-	HalfedgeRef e_end_old_next = he->next;
-	HalfedgeRef e_end_new_next = e_end_old_next->next;
+		twin_back = twin_back->next;
+	}while(twin_back->next != twin);
+	
+	HalfedgeRef twin_front = he->next;
+	HalfedgeRef twin_front2 = twin_front->next;
 
-	//Vertices next
-	VertexRef v_start_old = he->vertex;
-	VertexRef v_start_new = e_start_new_next->vertex;
-	VertexRef v_end_old = e_end_old_next->vertex;
-	VertexRef v_end_new = e_end_new_next->vertex;
+	//Get vertices
+	VertexRef v_old_start = he->vertex;
+	VertexRef v_old_end = twin->vertex;
+	VertexRef v_new_start = he_front2->vertex;
+	VertexRef v_new_end = twin_front2->vertex;
 
-	//Don't need to actually get edges
-
-	//Now faces
-	//"left" and "right" faces
+	//Get faces
 	FaceRef fl = he->face;
 	FaceRef fr = twin->face;
 
-	//Detach old half edges
-	e_start_old_prev->next = e_start_old_next;
-	e_end_old_prev->next = e_end_old_next;
-	v_start_old->halfedge = e_start_old_next;
-	v_end_old->halfedge = e_end_old_next;
+	//Now remove edge e
+	he_back->next = he_front;
+	twin_back->next = twin_front;
 
-	//Attach new half edges
-	e_start_old_next->next = he;
-	he->next = e_end_new_next;
-	e_end_old_next->next = twin;
-	twin->next = e_start_new_next;
-	v_start_new->halfedge = e_start_new_next;
-	v_end_new->halfedge = e_end_new_next;
+	he_front->vertex = v_old_start;
+	v_old_start->halfedge = he_front;
 
-	//Clean up faces
-	e_start_old_next->face = fl;
-	e_end_old_next->face = fr;
-	he->face = fl;
-	twin->face = fr;
+	twin_front->vertex = v_old_end;
+	v_old_end->halfedge = twin_front;
+
+	//Re-attach edge e in rotated place
+	v_new_start->halfedge = he_front2;
+	v_new_end->halfedge = twin_front2;
+
+	he_front->next = he;
+	he->next = twin_front2;
+
+	twin_front->next = twin;
+	twin->next = he_front2;
+
+	//Re-attach face info
 	fl->halfedge = he;
 	fr->halfedge = twin;
+
+	he_front->face = fl;
+	twin_front->face = fr;
+
+	he->vertex = v_new_start;
+	twin->vertex = v_new_end;
 
 	return e;
 }

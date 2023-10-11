@@ -8,11 +8,12 @@ Setup is described [here](https://github.com/eqdiag/myScotty3d/tree/main#readme)
 
 
 # Features
-## Local Mesh Operations
-- [ ] Flip Edge
-- [ ] Split Edge
+## Basic Local Mesh Operations
+- [x] Flip Edge
+- [x] Split Edge
 - [ ] Collapse Edge
 - [ ] Extrude Face
+## More Advanced Local Mesh Operations
 - [ ] Dissolve Vertex
 - [ ] Dissolve Edge
 - [ ] Collapse Face
@@ -25,10 +26,11 @@ Setup is described [here](https://github.com/eqdiag/myScotty3d/tree/main#readme)
 
 
 
-## Global Mesh Operations
+## Basic Mesh Operations
 - [ ] Triangulation
 - [ ] Linear Subdivision
 - [ ] Catmull-Clark Subidivision
+## More Advanced Global Mesh Operations
 - [ ] Loop Subdivision
 - [ ] Isotropic Remeshing
 - [ ] Simplification
