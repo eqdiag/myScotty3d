@@ -676,8 +676,413 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 	//Reminder: use interpolate_data() to merge corner_uv / corner_normal data on halfedges
 	// (also works for bone_weights data on vertices!)
+
+	HalfedgeRef he = e->halfedge;
+	HalfedgeRef twin = he->twin;
+
+	//First check if edge has a boundary face on some side
+	bool he_boundary = he->face->boundary;
+	bool twin_boundary = twin->face->boundary;
+	if(twin_boundary){
+
+		//Handle tri case differently than v>=4 case
+
+		//Phase 1: Collect all elements
+
+		//Half edges
+		HalfedgeRef he_n = he->next;
+		HalfedgeRef he_n_twin = he_n->twin;
+		HalfedgeRef he_p = he;
+		do{
+			he_p = he_p->next;
+		}while(he_p->next != he);
+		HalfedgeRef he_p_twin = he_p->twin;
+
+		HalfedgeRef twin_n = twin->next;
+		HalfedgeRef twin_p = he;
+		do{
+			twin_p = twin_p->next->twin;
+		}while(twin_p->next != twin);
+
+		HalfedgeRef he_n_twin_n = he_n_twin->next;
+		HalfedgeRef he_n_twin_p = he_n;
+		do{
+			he_n_twin_p = he_n_twin_p->next->twin;
+		}while(he_n_twin_p->next != he_n_twin);
+
+		HalfedgeRef he_p_twin_n = he_p_twin->next;
+		HalfedgeRef he_p_twin_p = twin;
+		do{
+			he_p_twin_p = he_p_twin_p->next->twin;
+		}while(he_p_twin_p->next != he_p_twin);
+
+		//Edges
+		//EdgeRef old_e_left = he_n->edge;
+		EdgeRef old_e_top = he->edge;
+		EdgeRef old_e_right = he_p->edge;
+
+		//Vertices
+		VertexRef old_v_left = he_n->vertex;
+		VertexRef old_v_bot = he_p->vertex;
+		VertexRef old_v_right = he->vertex;
+
+		//Faces
+		FaceRef old_face = he->face;
+		FaceRef old_face_left = he_n_twin->face;
+		FaceRef old_face_right = he_p_twin->face;
+		FaceRef bound_face = twin->face;
+
+		//Data
+		Vec3 e_center = e->center();
+
+		assert(old_face->degree() >= 3);
+
+		if(old_face->degree() == 3){ //Tri case
+
+			//First check if collapse is valid: is the face a "thin face",creates invalid edge on collapse?
+			if(he_n->face->boundary && he_p->face->boundary) return std::nullopt;
+
+			//Special case: change halfedges in nbhd of old_v_right to old_v_left
+			HalfedgeRef start = old_v_right->halfedge;
+			HalfedgeRef cur = start;
+			do{	
+				cur->vertex = old_v_left;
+				cur = cur->twin->next;
+			}while(cur != start);
+			
+			//Phase 2: Delete anything we need to
+
+			//Half edges
+			erase_halfedge(he);
+			erase_halfedge(twin);
+			erase_halfedge(he_p);
+			erase_halfedge(he_p_twin);
+
+			//Edges
+			erase_edge(old_e_top);
+			erase_edge(old_e_right);
+
+			//Vertices
+			erase_vertex(old_v_right);
+
+			//Faces
+			erase_face(old_face);
+
+			//Phase 3: Connect up what's left
+
+			//Half edges
+			twin_p->next = twin_n;
+			he_p_twin_p->next = he_n;
+			he_n->next = he_p_twin_n;
+			he_n->face = old_face_right;
+
+
+			//Vertices
+			old_v_left->halfedge = he_n_twin_n;
+			old_v_left->position = e_center;
+			old_v_bot->halfedge = he_p_twin_n;
+
+			//Faces
+			old_face_left->halfedge = he_n_twin;
+			old_face_right->halfedge = he_n;
+			bound_face->halfedge = twin_p;
+
+
+
+			return old_v_left;
+
+		}else{ //Unconditional collapse in this case (v>=4 case)
+
+			//Phase 2: Delete anything
+
+			//Special case: change halfedges in nbhd of old_v_right to old_v_left
+			HalfedgeRef start = old_v_right->halfedge;
+			HalfedgeRef cur = start;
+			do{	
+				cur->vertex = old_v_left;
+				cur = cur->twin->next;
+			}while(cur != start);
+			
+			//Half edges
+			erase_halfedge(he);
+			erase_halfedge(twin);
+
+			//Edges
+			erase_edge(e);
+
+			//Vertices
+			erase_vertex(old_v_right);
+
+			//Faces
+
+			//Phase 3: Connect up what's left
+
+			//Half edges
+			twin_p->next = twin_n;
+			he_p->next = he_n;
+
+			//Edges
+
+			//Vertices
+			old_v_left->halfedge = he_n;
+			old_v_left->position = e_center;
+
+			//Faces
+			old_face->halfedge = he_n;
+			bound_face->halfedge = twin_p;
+
+			return old_v_left;
+		}
+		
+	}else if(he_boundary){
+
+		e->halfedge = twin;
+		return collapse_edge(e);
+	}else{
+
+		
+
+
+		//Phase 1: Collect elements
+
+		//Half edges
+		HalfedgeRef he_n = he->next;
+		HalfedgeRef he_p = he;
+		do{
+			he_p = he_p->next;
+		}while(he_p->next != he);
+		
+		HalfedgeRef twin_n = twin->next;
+		HalfedgeRef twin_p = twin;
+		do{
+			twin_p = twin_p->next;
+		}while(twin_p->next != twin);
+		HalfedgeRef twin_p_twin = twin_p->twin;
+
+		HalfedgeRef he_n_twin = he_n->twin;
+
+		HalfedgeRef he_p_twin = he_p->twin;
+		//HalfedgeRef he_p_twin_n = he_p_twin->next;
+		HalfedgeRef he_p_twin_p = he_p;
+		do{
+			he_p_twin_p = he_p_twin_p->next->twin;
+		}while(he_p_twin_p->next != he_p_twin);
+		
+		HalfedgeRef twin_n_twin = twin_n->twin;
+		//HalfedgeRef twin_n_twin_n = twin_n_twin->next;
+		HalfedgeRef twin_n_twin_p = twin_n;
+		do{
+			twin_n_twin_p = twin_n_twin_p->next->twin;
+		}while(twin_n_twin_p->next != twin_n_twin);
+
+		
+
+		//Edges
+		//EdgeRef e_collapse = e;
+		EdgeRef top_left = he_n->edge;
+		EdgeRef bot_left = he_p->edge;
+		EdgeRef top_right = twin_p->edge;
+		EdgeRef bot_right = twin_n->edge;
+
+		//Vertices
+		//VertexRef v_top_left = he_n->next->vertex;
+		VertexRef v_bot_left = he_p->vertex;
+		//VertexRef v_top_right = twin_p->vertex;
+		VertexRef v_bot_right = twin_n->next->vertex;
+		VertexRef v_top = he_n->vertex;
+		VertexRef v_bot = he->vertex;
+
+		//Faces
+		FaceRef f_left = he->face;
+		FaceRef f_right = twin->face;
+		//FaceRef f_he_n = he_n_twin->face;
+		//FaceRef f_twin_n = twin_n_twin->face;
+
+		//Data
+		Vec3 e_center = e->center();
+
+		//First check for hourglass shape case
+
+		bool top_bound = false;
+		bool bot_bound = false;
+		HalfedgeRef cur = v_top->halfedge;
+		do{
+			if(cur->face->boundary) top_bound = true;
+			cur = cur->twin->next;
+		}while(cur != v_top->halfedge);
+		cur = v_bot->halfedge;
+		do{
+			if(cur->face->boundary) bot_bound = true;
+			cur = cur->twin->next;
+		}while(cur != v_bot->halfedge);
+
+		//Hourglass means each endpoint of edge has a boundary face in its orbit
+		if(top_bound && bot_bound) return std::nullopt;
+
+		//3 cases: tri & tri, tri & not tri,not tri & not tri
+		uint32_t size_left = f_left->degree();
+		uint32_t size_right = f_right->degree();
+
+		if((size_left == 3 ) && (size_right == 3)){ //Tri | Tri 
+
+			//Phase 2: Delete stuff
+			
+			//Before deleting, update half edges to pt to collapsed vertex v_top
+			HalfedgeRef cur = v_bot->halfedge;
+			do{
+				cur->vertex = v_top;
+				cur = cur->twin->next;
+			}while(cur != v_bot->halfedge);
+
+			//Half edges
+			erase_halfedge(he);
+			erase_halfedge(he_n);
+			erase_halfedge(he_p);
+
+			erase_halfedge(twin);
+			erase_halfedge(twin_p);
+			erase_halfedge(twin_n);			
+
+			//Edges
+			erase_edge(e);
+			erase_edge(bot_left);
+			erase_edge(bot_right);
+
+			//Vertices
+			erase_vertex(v_bot);
+
+			//Faces
+			erase_face(f_left);
+			erase_face(f_right);
+
+			//Phase 3: Connect up stuff
+
+			//Half edges
+			he_n_twin->twin = he_p_twin;
+			he_n_twin->edge = top_left;
+			he_p_twin->twin = he_n_twin;
+			he_p_twin->edge = top_left;
+
+			twin_n_twin->twin = twin_p_twin;
+			twin_n_twin->edge = top_right;
+			twin_p_twin->twin = twin_n_twin;
+			twin_p_twin->edge = top_right;
+
+			//Edges
+			top_left->halfedge = he_n_twin;
+			top_right->halfedge = twin_p_twin;
+
+			//Vertices
+			v_top->halfedge = twin_p_twin;
+			v_top->position = e_center;
+			v_bot_left->halfedge = he_n_twin;
+			v_bot_right->halfedge = twin_n_twin;
+
+			//Faces
+
+			return v_top;
+
+		}else if((size_left == 3) && (size_right != 3)){ //Tri | Face
+
+			//Phase 2: delete stuff
+
+			//First move all bot halfedges to have top vert due to collapse
+			HalfedgeRef start = v_bot->halfedge;
+			HalfedgeRef cur = start;
+			do{
+				cur->vertex = v_top;
+				cur = cur->twin->next;
+			}while(cur != start);
+
+			//Half edges
+			erase_halfedge(he);
+			erase_halfedge(he_n);
+			erase_halfedge(he_p);
+			erase_halfedge(twin);
+
+			//Edges
+			erase_edge(e);
+			erase_edge(bot_left);
+
+			//Vertices
+			erase_vertex(v_bot);
+
+			//Faces
+			erase_face(f_left);
+
+			//Data
+			v_top->position = e_center;
+
+			//Phase 3: connect up stuff
+
+			//Half edges
+			he_n_twin->twin = he_p_twin;
+			he_n_twin->edge = top_left;
+			he_p_twin->twin = he_n_twin;
+			he_p_twin->edge = top_left;
+			twin_p->next = twin_n;
+
+			//Edges
+			top_left->halfedge = he_n_twin;
+
+			//Vertices
+			v_bot_left->halfedge = he_n_twin;
+			v_top->halfedge = he_p_twin;
+
+			//Faces
+			f_right->halfedge = twin_p;
+
+			return v_top;
+		}else if((size_left != 3) && (size_right == 3)){ // Face | Face
+			e->halfedge = twin;
+			return collapse_edge(e);
+		}else{ //General non-tri case
+
+			//Part 2: Delete stuff
+
+			//First move all bot halfedges to have top vert due to collapse
+			HalfedgeRef start = v_bot->halfedge;
+			HalfedgeRef cur = start;
+			do{
+				cur->vertex = v_top;
+				cur = cur->twin->next;
+			}while(cur != start);
+
+			//Half edges
+			erase_halfedge(he);
+			erase_halfedge(twin);
+
+			//Edges
+			erase_edge(e);
+
+			//Vertices
+			erase_vertex(v_bot);
+
+			//Faces
+
+			//Data
+			v_top->position = e_center;
+
+			//Part 3: connect stuff
+
+			//Half edges
+			he_p->next = he_n;
+			twin_p->next = twin_n;
+
+			//Edges
+
+			//Vertices
+			v_top->halfedge = he_n;
+
+			//Faces
+			f_left->halfedge = he_n;
+			f_right->halfedge = twin_n;
+
+			return v_top;
+		}
+	}
+
 	
-    return std::nullopt;
 }
 
 /*

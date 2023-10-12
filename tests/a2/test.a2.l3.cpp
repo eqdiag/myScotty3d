@@ -1,5 +1,6 @@
 #include "test.h"
 #include "geometry/halfedge.h"
+#include <iostream>
 
 static void expect_collapse(Halfedge_Mesh &mesh, Halfedge_Mesh::EdgeRef edge, Halfedge_Mesh const &after) {
 	if (auto ret = mesh.collapse_edge(edge)) {
