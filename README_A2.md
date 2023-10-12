@@ -11,7 +11,7 @@ Setup is described [here](https://github.com/eqdiag/myScotty3d/tree/main#readme)
 ## Basic Local Mesh Operations
 - [x] Flip Edge
 - [x] Split Edge
-- [ ] Collapse Edge
+- [x] Collapse Edge
 - [ ] Extrude Face
 ## More Advanced Local Mesh Operations
 - [ ] Dissolve Vertex
