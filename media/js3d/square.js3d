@@ -1,0 +1,25 @@
+{"scene":{
+	"FORMAT":"js3d-v1",
+	"transforms":{},
+	"cameras":{},
+	"meshes":{
+		"Mesh":{ "FORMAT":"s3d-hm-1","halfedge_nexts":"uint32:AgAAAAcAAAAEAAAAAQAAAAYAAAADAAAAAAAAAAUAAAA","halfedge_corner_uvs":"vec2:GvYVPhr2FT56glo/GvYVPnqCWj8a9hU+eYJaP3qCWj95glo/eoJaPxr2FT56glo/GvYVPnqCWj8a9hU+GvYVPg","halfedge_corner_normals":"vec3:AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIC/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIC/","bone_weight_bones":"uint32:","bone_weight_weights":"float:","vertex_halfedges":"uint32:AAAAAAIAAAAEAAAABgAAAA","vertex_positions":"vec3:PP8uv8DYcr8AAAAAnpFRPw7Be78AAAAAMDeXPxDBez8AAAAAYYCov8DYcj8AAAAA","vertex_bone_weight_ends":"uint32:AAAAAAAAAAAAAAAAAAAAAA","edge_sharps":"bool:CA","face_halfedges":"uint32:AAAAAAcAAAA","face_boundaries":"bool:YA"}
+	},
+	"skinned_meshes":{},
+	"shapes":{},
+	"particles":{},
+	"textures":{},
+	"materials":{},
+	"delta_lights":{},
+	"env_lights":{},
+	"instances":{
+		"cameras":{},
+		"meshes":{},
+		"skinned_meshes":{},
+		"shapes":{},
+		"particles":{},
+		"delta_lights":{},
+		"env_lights":{}
+	}
+},"animator":{"FORMAT":"js3d-v1",
+"splines":{}}}

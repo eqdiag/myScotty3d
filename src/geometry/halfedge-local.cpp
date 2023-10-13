@@ -321,15 +321,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		bound_f->halfedge = twin;
 
 		//Debugging
-		assert(he->next == he_n);
-		assert(he_n->next == new_in);
-		assert(he_n->next->next == he);
-		assert(new_f == new_in->face);
-
-		assert(split_in->next == new_out);
-		assert(new_out->next == he_n2);
-		assert(he_n2->next == he_p);
-		assert(he_p->next == split_in);
 
 
 		return new_v;
@@ -710,14 +701,14 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 			he_n_twin_p = he_n_twin_p->next->twin;
 		}while(he_n_twin_p->next != he_n_twin);
 
-		HalfedgeRef he_p_twin_n = he_p_twin->next;
+		//HalfedgeRef he_p_twin_n = he_p_twin->next;
 		HalfedgeRef he_p_twin_p = twin;
 		do{
 			he_p_twin_p = he_p_twin_p->next->twin;
 		}while(he_p_twin_p->next != he_p_twin);
 
 		//Edges
-		//EdgeRef old_e_left = he_n->edge;
+		EdgeRef old_e_left = he_n->edge;
 		EdgeRef old_e_top = he->edge;
 		EdgeRef old_e_right = he_p->edge;
 
@@ -728,8 +719,8 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 		//Faces
 		FaceRef old_face = he->face;
-		FaceRef old_face_left = he_n_twin->face;
-		FaceRef old_face_right = he_p_twin->face;
+		//FaceRef old_face_left = he_n_twin->face;
+		//FaceRef old_face_right = he_p_twin->face;
 		FaceRef bound_face = twin->face;
 
 		//Data
@@ -737,10 +728,15 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 		assert(old_face->degree() >= 3);
 
+		std::cout << "wuts it now: " << he_n_twin_n->id << std::endl;
+
+
 		if(old_face->degree() == 3){ //Tri case
 
+
 			//First check if collapse is valid: is the face a "thin face",creates invalid edge on collapse?
-			if(he_n->face->boundary && he_p->face->boundary) return std::nullopt;
+		
+			if(he_n->twin->face->boundary && he_p->twin->face->boundary) return std::nullopt;
 
 			//Special case: change halfedges in nbhd of old_v_right to old_v_left
 			HalfedgeRef start = old_v_right->halfedge;
@@ -755,12 +751,12 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 			//Half edges
 			erase_halfedge(he);
 			erase_halfedge(twin);
+			erase_halfedge(he_n);
 			erase_halfedge(he_p);
-			erase_halfedge(he_p_twin);
 
 			//Edges
-			erase_edge(old_e_top);
 			erase_edge(old_e_right);
+			erase_edge(old_e_top);
 
 			//Vertices
 			erase_vertex(old_v_right);
@@ -772,21 +768,23 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 			//Half edges
 			twin_p->next = twin_n;
-			he_p_twin_p->next = he_n;
-			he_n->next = he_p_twin_n;
-			he_n->face = old_face_right;
-
+			he_n_twin->twin = he_p_twin;
+			he_p_twin->twin = he_n_twin;
+			he_p_twin->edge = old_e_left;
+	
+			//Edges
+			old_e_left->halfedge = he_n_twin;
 
 			//Vertices
-			old_v_left->halfedge = he_n_twin_n;
+			old_v_left->halfedge = twin_n;
+			old_v_bot->halfedge = he_n_twin;
 			old_v_left->position = e_center;
-			old_v_bot->halfedge = he_p_twin_n;
+
+			std::cout << "old_v_left: " << old_v_left->id << std::endl;
+			std::cout << "old_v_left_he: " << old_v_left->halfedge->id << std::endl;
 
 			//Faces
-			old_face_left->halfedge = he_n_twin;
-			old_face_right->halfedge = he_n;
 			bound_face->halfedge = twin_p;
-
 
 
 			return old_v_left;
@@ -835,6 +833,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 		}
 		
 	}else if(he_boundary){
+		std::cout << "HE BOUNDARY\n";
 
 		e->halfedge = twin;
 		return collapse_edge(e);
