@@ -320,8 +320,21 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		old_f->halfedge = split_in;
 		bound_f->halfedge = twin;
 
-		//Debugging
+		//Update face normals
+		HalfedgeRef cur = old_f->halfedge;
+		Vec3 old_face_normal = old_f->normal();
+		do{
+			cur->corner_normal = old_face_normal;
+			cur = cur->next;
+		}while(cur != old_f->halfedge);
 
+		cur = new_f->halfedge;
+		Vec3 new_face_normal = new_f->normal();
+		do{
+			cur->corner_normal = new_face_normal;
+			cur = cur->next;
+		}while(cur != new_f->halfedge);
+		
 
 		return new_v;
 
@@ -430,6 +443,37 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::split_edge(EdgeRef e) {
 		new_f_left->halfedge = new_out;
 		new_f_right->halfedge = twin;
 
+		//Update normals for all 4 faces
+		Vec3 old_f_left_normal = old_f_left->normal();
+		Vec3 old_f_right_normal = old_f_right->normal();
+		Vec3 new_f_left_normal = new_f_left->normal();
+		Vec3 new_f_right_normal = new_f_right->normal();
+
+		HalfedgeRef cur = old_f_left->halfedge;
+		do{
+			cur->corner_normal = old_f_left_normal;
+			cur = cur->next;
+		}while(cur != old_f_left->halfedge);
+
+		cur = old_f_right->halfedge;
+		do{
+			cur->corner_normal = old_f_right_normal;
+			cur = cur->next;
+		}while(cur != old_f_right->halfedge);
+
+		cur = new_f_left->halfedge;
+		do{
+			cur->corner_normal = new_f_left_normal;
+			cur = cur->next;
+		}while(cur != new_f_left->halfedge);
+
+		cur = new_f_right->halfedge;
+		do{
+			cur->corner_normal = new_f_right_normal;
+			cur = cur->next;
+		}while(cur != new_f_right->halfedge);
+
+
 		return new_v;
 	}
 }
@@ -522,8 +566,148 @@ std::optional<Halfedge_Mesh::FaceRef> Halfedge_Mesh::extrude_face(FaceRef f) {
 	// Reminder: This function does not update the vertex positions.
 	// Remember to also fill in extrude_helper (A2L4h)
 
-	(void)f;
-    return std::nullopt;
+	//Not many cases to consider here
+	//Loop through all half edges in face and build faces
+
+	//Phase 1: Collect everything
+
+	//Collect up all half-edges
+	std::vector<HalfedgeRef> half_edges;
+	HalfedgeRef cur = f->halfedge;
+	do{
+		half_edges.emplace_back(cur);
+		cur = cur->next;
+	}while(cur != f->halfedge);
+
+
+	//Phase 2: Create new stuff
+
+	//New vertices
+	std::vector<EdgeRef> new_edges;
+	std::vector<VertexRef> new_vertices;
+	std::vector<FaceRef> new_faces;
+	std::vector<HalfedgeRef> inner_half_edges;
+
+
+	//Outer faces
+	for(auto& he: half_edges){
+	
+		//Create everything first
+		HalfedgeRef he_n = emplace_halfedge();
+		HalfedgeRef he_n2 = emplace_halfedge();
+		HalfedgeRef he_p = emplace_halfedge();
+
+		EdgeRef new_edge = emplace_edge();
+		new_edges.emplace_back(new_edge);
+
+		VertexRef new_vertex = emplace_vertex();
+		new_vertices.emplace_back(new_vertex);
+
+		FaceRef new_face = emplace_face();
+		new_faces.emplace_back(new_face);
+
+		//Connect some things
+
+		//Half edges
+		VertexRef he_n_v = he->next->vertex;
+
+		//No twins set yet
+
+		//All next set
+		he->next = he_n;
+		he_n->next = he_n2;
+		he_n2->next = he_p;
+		he_p->next = he;
+
+		//Some verts set (just leaves he_n2)
+		he_n->vertex = he_n_v;
+		he_p->vertex = new_vertex;		
+
+		//Some edges set
+		he_p->edge = new_edge;
+
+		//All faces set
+		he->face = new_face;
+		he_n->face = new_face;
+		he_n2->face = new_face;
+		he_p->face = new_face;
+
+		//Edges
+		new_edge->halfedge = he_p;
+
+		//Vertices
+		new_vertex->halfedge = he_p;
+		new_vertex->position = he->vertex->position;
+
+		//Faces
+		new_face->halfedge = he;
+	}
+
+	//Connect up outer faces via twin connections
+	for(int i = 0;i < half_edges.size();i++){
+		int i_suc = (i + 1) % half_edges.size();
+		HalfedgeRef he = half_edges.at(i);
+		HalfedgeRef he_suc = half_edges.at(i_suc);
+
+		HalfedgeRef he_n = he->next;
+		HalfedgeRef he_n2 = he_n->next;
+		HalfedgeRef he_suc_p = he_suc->next->next->next;
+		he_n->twin = he_suc_p;
+		he_suc_p->twin = he_n;
+		he_n->edge = he_suc_p->edge;
+		he_n2->vertex = he_suc_p->vertex;
+	}
+
+	//All the outer face connections should be set at this point
+
+	//Inner face
+	for(int i = 0;i < half_edges.size();i++){
+		
+		//Create everyting first
+		HalfedgeRef inner_he = emplace_halfedge();
+		inner_half_edges.emplace_back(inner_he);
+
+
+		EdgeRef inner_e = emplace_edge();
+
+		//Collect elements 
+
+		//Outer half edges
+		HalfedgeRef he = half_edges.at(i);
+		HalfedgeRef he_n = he->next;
+		HalfedgeRef he_n2 = he_n->next;
+		HalfedgeRef he_p = he_n2->next;
+
+		//Set up connections
+
+		//Half edges
+		inner_he->twin = he_n2;
+		inner_he->vertex = he_p->vertex;
+		inner_he->edge = inner_e;
+		inner_he->face = f;
+		he_n2->twin = inner_he;
+		he_n2->edge = inner_e;
+
+		//Edges
+		inner_e->halfedge = inner_he;
+	}
+
+	//Just set face half edge to first built
+	assert(inner_half_edges.size() >= 0);
+	f->halfedge = inner_half_edges.at(0);
+
+	//Need to connect up inner half edge nexts
+	for(int i =0;i < inner_half_edges.size();i++){
+
+		int i_suc = (i + 1) % inner_half_edges.size();
+
+		HalfedgeRef he = inner_half_edges.at(i);
+		HalfedgeRef he_suc = inner_half_edges.at(i_suc);
+		he->next = he_suc;
+	}
+
+
+    return f;
 }
 
 /*
@@ -606,6 +790,22 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 
 	he->vertex = v_new_start;
 	twin->vertex = v_new_end;
+
+	//Update halfedge normals
+
+	HalfedgeRef cur = fl->halfedge;
+	Vec3 fl_normal = fl->normal();
+	do{
+		cur->corner_normal = fl_normal;
+		cur = cur->next;
+	}while(cur != fl->halfedge);
+
+	cur = fr->halfedge;
+	Vec3 fr_normal = fr->normal();
+	do{
+		cur->corner_normal = fr_normal;
+		cur = cur->next;
+	}while(cur != fr->halfedge);
 
 	return e;
 }
@@ -695,7 +895,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 			twin_p = twin_p->next->twin;
 		}while(twin_p->next != twin);
 
-		HalfedgeRef he_n_twin_n = he_n_twin->next;
+		//HalfedgeRef he_n_twin_n = he_n_twin->next;
 		HalfedgeRef he_n_twin_p = he_n;
 		do{
 			he_n_twin_p = he_n_twin_p->next->twin;
@@ -728,7 +928,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 
 		assert(old_face->degree() >= 3);
 
-		std::cout << "wuts it now: " << he_n_twin_n->id << std::endl;
 
 
 		if(old_face->degree() == 3){ //Tri case
@@ -780,8 +979,7 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 			old_v_bot->halfedge = he_n_twin;
 			old_v_left->position = e_center;
 
-			std::cout << "old_v_left: " << old_v_left->id << std::endl;
-			std::cout << "old_v_left_he: " << old_v_left->halfedge->id << std::endl;
+		
 
 			//Faces
 			bound_face->halfedge = twin_p;
@@ -833,7 +1031,6 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 		}
 		
 	}else if(he_boundary){
-		std::cout << "HE BOUNDARY\n";
 
 		e->halfedge = twin;
 		return collapse_edge(e);
@@ -1172,6 +1369,48 @@ void Halfedge_Mesh::extrude_positions(FaceRef face, Vec3 move, float shrink) {
 	// use mesh navigation to get starting positions from the surrounding faces,
 	// compute the centroid from these positions + use to shrink,
 	// offset by move
+
+	Vec3 face_centroid{0,0,0};
+	HalfedgeRef outer_he = face->halfedge->twin->next->next;
+	HalfedgeRef cur = outer_he;
+	int count = 0;
+	do{
+		face_centroid += cur->vertex->position;
+		count++;
+		cur = cur->next->twin->next;
+	}while(cur != outer_he);
+
+	face_centroid /= static_cast<float>(count);
 	
+	HalfedgeRef he = face->halfedge;
+	do{
+		outer_he = he->twin->next->next;
+		Vec3 outer_pos = outer_he->vertex->position;
+		he->vertex->position = outer_pos*(1.0 - shrink) + face_centroid*shrink + move;
+		he = he->next;
+	}while(he != face->halfedge);
+
+	//Also need to compute face normals
+
+	//Center phase normals
+	Vec3 f_normal = face->normal();
+	cur = face->halfedge;
+	do{
+		cur->corner_normal = f_normal;
+		cur = cur->next;
+	}while(cur != face->halfedge);
+
+	//Outer ring face normals
+	HalfedgeRef inner_he = face->halfedge;
+	do{
+		cur = inner_he->twin;
+		Vec3 out_f_normal = cur->face->normal();
+		do{
+			cur->corner_normal = out_f_normal;
+			cur = cur->next;
+		}while(cur != inner_he->twin);
+		inner_he = inner_he->next;
+	}while(inner_he != face->halfedge);
+
 }
 

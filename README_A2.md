@@ -12,7 +12,7 @@ Setup is described [here](https://github.com/eqdiag/myScotty3d/tree/main#readme)
 - [x] Flip Edge
 - [x] Split Edge
 - [x] Collapse Edge
-- [ ] Extrude Face
+- [x] Extrude Face
 ## More Advanced Local Mesh Operations
 - [ ] Dissolve Vertex
 - [ ] Dissolve Edge
