@@ -14,6 +14,178 @@
 void Halfedge_Mesh::triangulate() {
 	//A2G1: triangulation
 	
+	//Let n = degree of current face
+
+	std::vector<FaceRef> old_faces;
+	for(FaceRef face = faces.begin(); face != faces.end(); ++face){
+		old_faces.emplace_back(face);
+	}
+
+	//Go through all faces and break into triangles if not a triangle
+	//Also don't modify boundary faces
+	for(auto& face: old_faces){
+
+		int n = face->degree();
+		if((n == 3) || face->boundary) continue;
+
+		//Phase 1: Collect everything
+
+		//Half edges
+		HalfedgeRef he = face->halfedge;
+		HalfedgeRef he_n = he->next;
+
+		HalfedgeRef he_p;
+		HalfedgeRef he_p_p = he;
+		do{
+			he_p_p = he_p_p->next;
+		}while(he_p_p->next->next != he);
+		he_p = he_p_p->next;
+
+		//Edges
+
+		//Vertices
+		VertexRef base_vertex = he->vertex;
+
+		//Faces
+		FaceRef right_face = he->face;
+
+		//Phase 2: Create new elements, connect new stuff
+		std::vector<FaceRef> new_faces;
+
+
+		//int num_new_half_edges = 2*(n-3);
+		//int num_new_edges = n-3;
+		int num_new_faces = n-3;
+
+		//Half-edges 2*(n-3) of them
+		//Edges n-3 of them
+		//Vertices none
+		//Faces n-3 new ones
+
+		//Create faces first
+		for(int i = 0;i< num_new_faces;i++){
+			new_faces.emplace_back(emplace_face(false));
+		}
+
+		HalfedgeRef cur = he_n;
+		HalfedgeRef next = he_n;
+
+		for(int i = 0;i < (num_new_faces + 1);i++){
+
+			cur = next;
+			next = cur->next;
+
+			//Left face case
+			if(i == 0){
+				//Phase 1: Create everything
+
+				//Half edges
+				HalfedgeRef new_out = emplace_halfedge();
+				HalfedgeRef new_in = emplace_halfedge();
+
+				//Edges
+				EdgeRef new_edge = emplace_edge();
+
+				//Faces
+				FaceRef left_face = new_faces[0];
+				FaceRef next_face;
+				if(num_new_faces == 1){
+					next_face = right_face;
+				}else{
+					next_face = new_faces[1];
+				}
+
+
+				//Phase 2: Set data and connect up
+
+				//Half edge
+				new_in->set_tnvef(new_out,he,next->vertex,new_edge,left_face);
+				new_out->set_tnvef(new_in,next,base_vertex,new_edge,next_face);
+				he->face = left_face;
+				he_n->next = new_in;
+				he_n->face = left_face;
+
+				//Edges
+				new_edge->halfedge = new_in;
+
+				//Faces
+				left_face->halfedge = he_n;
+				left_face->boundary = false;
+
+				//HalfedgeRef temp = cur;
+				assert(cur == he_n);
+				assert(he_n->next == new_in);
+				assert(new_in->next == he);
+				assert(he->next == he_n);
+
+			}else if(i == num_new_faces){ //Right face case
+			
+				//Phase 1: Collect/Create elements
+
+				//Faces
+				FaceRef prev_face = new_faces[num_new_faces - 1];
+
+				//Half edges
+				HalfedgeRef new_in = prev_face->halfedge->next;
+				HalfedgeRef new_out = new_in->twin;
+
+	
+				//Phase 2: Set data and connect up
+
+				//Half edges
+				he_p->next = new_out;
+				he_p->face = right_face;
+				he_p_p->face = right_face;
+
+				//Faces
+				right_face->halfedge = he_p_p;
+
+				//HalfedgeRef temp = he_p;
+				assert(he_p->next == new_out);
+				assert(new_out->next == he_p_p);
+				assert(he_p_p->next == he_p);
+
+			}else{
+
+				//Phase 1: Create/collect elements
+
+
+				//Faces
+				FaceRef prev_face = new_faces[i - 1];
+				FaceRef cur_face = new_faces[i];
+				FaceRef next_face = new_faces[i+1];
+
+				//Half edges
+				HalfedgeRef new_in = emplace_halfedge();
+				HalfedgeRef new_out = emplace_halfedge();
+				HalfedgeRef he_prev = prev_face->halfedge;
+
+				//Edges
+				EdgeRef new_edge = emplace_edge();
+
+
+				//Phase 2: Connect up stuff
+
+				//Half edges
+				new_in->set_tnvef(new_out,he_prev->next->twin,next->vertex,new_edge,cur_face);
+				new_out->set_tnvef(new_in,next,base_vertex,new_edge,next_face);
+				cur->next = new_in;
+			
+				//Edges
+				new_edge->halfedge = new_in;
+
+				//Faces
+				cur_face->halfedge = cur;
+
+			}
+		}
+
+
+		
+
+
+		//Phase 3: Connect up old stuff
+	}
 }
 
 /*

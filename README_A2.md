@@ -27,7 +27,7 @@ Setup is described [here](https://github.com/eqdiag/myScotty3d/tree/main#readme)
 
 
 ## Basic Mesh Operations
-- [ ] Triangulation
+- [x] Triangulation
 - [ ] Linear Subdivision
 - [ ] Catmull-Clark Subidivision
 ## More Advanced Global Mesh Operations
