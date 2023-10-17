@@ -204,17 +204,35 @@ void Halfedge_Mesh::linear_subdivide() {
 
 	// For every vertex, assign its current position to vertex_positions[v]:
 
-	//(TODO)
+	for(VertexCRef v = vertices.begin();v != vertices.end();++v){
+		vertex_positions[v] = v->position;
+	}
+
 
     // For every edge, assign the midpoint of its adjacent vertices to edge_vertex_positions[e]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Edge)
 
-	//(TODO)
+	for(EdgeCRef e = edges.begin(); e != edges.end();++e){
+		edge_vertex_positions[e] = e->center();
+	}
 
     // For every *non-boundary* face, assign the centroid (i.e., arithmetic mean) to face_vertex_positions[f]:
 	// (you may wish to investigate the helper functions of Halfedge_Mesh::Face)
 
-	//(TODO)
+	for(FaceCRef f = faces.begin();f != faces.end();++f){
+		Vec3 centroid{0,0,0};
+		int num_corners = 0;
+		if(!f->boundary){
+			HalfedgeRef start = f->halfedge;
+			HalfedgeRef cur = start;
+			do{
+				centroid += cur->vertex->position;
+				num_corners++;
+				cur = cur->next;
+			}while(cur != start);
+			face_vertex_positions[f] = centroid / num_corners;
+		}
+	}
 
 
 	//use the helper function to actually perform the subdivision:
@@ -244,10 +262,73 @@ void Halfedge_Mesh::catmark_subdivide() {
 	// https://en.wikipedia.org/wiki/Catmull%E2%80%93Clark_subdivision_surface
 
 	// Faces
+	for(FaceCRef f = faces.begin(); f != faces.end();++f){
+		if(!f->boundary){
+			Vec3 centroid{0,0,0};
+			int num_corners = 0;
+			HalfedgeRef start = f->halfedge;
+			HalfedgeRef cur = start;
+			do{
+				centroid += cur->vertex->position;
+				num_corners++;
+				cur = cur->next;
+			}while(cur != start);
+			face_vertex_positions[f] = centroid / num_corners;
+		}
+	}
 
 	// Edges
+	for(EdgeCRef e = edges.begin();e != edges.end();++e){
+		if(e->on_boundary()){ //Boundary case
+			edge_vertex_positions[e] = e->center();
+		}else{ //Non-boundary case
+			HalfedgeCRef he = e->halfedge;
+			HalfedgeCRef twin = he->twin;
+			FaceCRef left = he->face;
+			FaceCRef right = twin->face;
+			Vec3 edge_sum = he->vertex->position + twin->vertex->position;
+			edge_vertex_positions[e] = (edge_sum + face_vertex_positions[left] + face_vertex_positions[right])/4.0;
+		}
+	}
 
 	// Vertices
+	for(VertexCRef v = vertices.begin(); v != vertices.end();++v){
+		if(v->on_boundary()){ //Boundary case
+
+			Vec3 new_v{0,0,0};
+			HalfedgeCRef start = v->halfedge;
+			HalfedgeCRef cur = start;
+			new_v += (3.0/4.0)*v->position;
+			do{
+				VertexCRef v_spoke = cur->twin->vertex;
+				if(v_spoke->on_boundary()){ //Only weight boundary vertices
+					new_v += (1.0/8.0)*v_spoke->position;
+				}
+				cur = cur->twin->next;
+			}while(cur != start);
+			vertex_positions[v] = new_v;
+
+		}else{ //Non-boundary case
+
+			Vec3 Q{0,0,0}; //Avg of adjacent faces
+			Vec3 R{0,0,0}; //Avg of all edges around v
+			Vec3 S = v->position; //Original vertex position
+			int n = 0;
+			HalfedgeCRef start = v->halfedge;
+			HalfedgeCRef cur = start;
+			do{
+				Q += face_vertex_positions[cur->face]; //New face vertices
+				R += cur->edge->center(); //Old edge centers
+
+				n++;
+				cur = cur->twin->next;
+			}while(cur != start);
+			Q /= n;
+			R /= n;
+
+			vertex_positions[v] = (Q + 2.0*R + (n-3)*S)/n;
+		}
+	}
 
 	
 	//Now, use the provided helper function to actually perform the subdivision:

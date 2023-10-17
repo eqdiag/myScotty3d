@@ -28,8 +28,8 @@ Setup is described [here](https://github.com/eqdiag/myScotty3d/tree/main#readme)
 
 ## Basic Mesh Operations
 - [x] Triangulation
-- [ ] Linear Subdivision
-- [ ] Catmull-Clark Subidivision
+- [x] Linear Subdivision
+- [x] Catmull-Clark Subidivision
 ## More Advanced Global Mesh Operations
 - [ ] Loop Subdivision
 - [ ] Isotropic Remeshing
