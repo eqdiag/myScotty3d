@@ -761,6 +761,11 @@ std::optional<Halfedge_Mesh::EdgeRef> Halfedge_Mesh::flip_edge(EdgeRef e) {
 	FaceRef fl = he->face;
 	FaceRef fr = twin->face;
 
+	//Check if either vertex on ends of edge has valence 2, if so abort
+	int v_he_nbhd = he->vertex->degree();
+	int v_twin_nbdh = twin->vertex->degree();
+	if((v_he_nbhd <= 3) || (v_twin_nbdh <= 3)) return std::nullopt;
+
 	//Now remove edge e
 	he_back->next = he_front;
 	twin_back->next = twin_front;
@@ -868,8 +873,11 @@ std::optional<Halfedge_Mesh::VertexRef> Halfedge_Mesh::collapse_edge(EdgeRef e) 
 	//Reminder: use interpolate_data() to merge corner_uv / corner_normal data on halfedges
 	// (also works for bone_weights data on vertices!)
 
+
+
 	HalfedgeRef he = e->halfedge;
 	HalfedgeRef twin = he->twin;
+
 
 	//First check if edge has a boundary face on some side
 	bool he_boundary = he->face->boundary;

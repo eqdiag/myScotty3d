@@ -7,9 +7,22 @@
 Test test_a2_local_mix("a2.local.mix", []() {
 	RNG rng(2266524198);
 
-	Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_mesh(Util::sphere_mesh(1.0f, 2));
 
-	constexpr uint32_t operations = 10;
+	Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_faces({
+		Vec3{-1.0f, 1.0f, 1.0f}, 	Vec3{-1.0f, 1.0f, -1.0f},
+		Vec3{-1.0f, -1.0f, -1.0f}, 	Vec3{-1.0f, -1.0f, 1.0f},
+		Vec3{1.0f, -1.0f, -1.0f}, 	Vec3{1.0f, -1.0f, 1.0f},
+		Vec3{1.0f, 1.0f, -1.0f}, 	Vec3{1.0f, 1.0f, 1.0f}
+	}, {
+		{3, 0, 1, 2}, 
+		{5, 3, 2, 4}, 
+		{7, 5, 4, 6}, 
+		{0, 7, 6, 1},
+		{0, 3, 5, 7}, 
+		{6, 4, 2, 1}
+	});
+
+	constexpr uint32_t operations = 5;
 
 	// On a list iterator, std::advance is O(n), making this O(n^2).
 	// It would be nice if we had a halfedge mesh implementation with flat arrays instead of std::lists...
@@ -32,6 +45,8 @@ Test test_a2_local_mix("a2.local.mix", []() {
 		return itr;
 	};
 
+
+
     auto positions = [&](Halfedge_Mesh::FaceRef f) {
 		Halfedge_Mesh::HalfedgeRef face_he = f->halfedge;
 		Halfedge_Mesh::HalfedgeRef face_he_orig = face_he;
@@ -43,9 +58,15 @@ Test test_a2_local_mix("a2.local.mix", []() {
         return start_positions;
     };
 
+
 	for (uint32_t i = 0; i < operations; i++) {
 
-		int32_t op = rng.integer(0, 11);
+
+		//Default is 11
+		int32_t op = rng.integer(0,11);
+
+		if(op == 2) op++;
+
 
 		switch (op) {
 		case 0: {

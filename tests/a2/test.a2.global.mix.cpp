@@ -7,7 +7,20 @@
 Test test_a2_global_mix("a2.global.mix", []() {
 	RNG rng(2266524198);
 
-	Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_mesh(Util::sphere_mesh(1.0f, 2));
+
+	Halfedge_Mesh mesh = Halfedge_Mesh::from_indexed_faces({
+		Vec3{-1.0f, 1.0f, 1.0f}, 	Vec3{-1.0f, 1.0f, -1.0f},
+		Vec3{-1.0f, -1.0f, -1.0f}, 	Vec3{-1.0f, -1.0f, 1.0f},
+		Vec3{1.0f, -1.0f, -1.0f}, 	Vec3{1.0f, -1.0f, 1.0f},
+		Vec3{1.0f, 1.0f, -1.0f}, 	Vec3{1.0f, 1.0f, 1.0f}
+	}, {
+		{3, 0, 1, 2}, 
+		{5, 3, 2, 4}, 
+		{7, 5, 4, 6}, 
+		{0, 7, 6, 1},
+		{0, 3, 5, 7}, 
+		{6, 4, 2, 1}
+	});
 
 	constexpr uint32_t operations = 10;
 
